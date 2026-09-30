@@ -103,7 +103,7 @@ Real-site tests must use the `e2e` marker and require `--run-e2e`; none exist ye
 
 The final deliverable is a repository URL, not just local files. Before submission, the repository should contain the implementation, external test data, verified run instructions, architecture explanation, assumptions and limitations, the bug analysis, and a run report or accessible report artifact. Reviewer access must be verified.
 
-No repository has been created or published. Repository destination, visibility, and permission to publish are pending. Credentials, session state, and sensitive screenshots must not be committed.
+The public repository is available at `https://github.com/Ni172/ebay-playwright-automation`. Credentials, session state, and sensitive screenshots must not be committed.
 
 ## Project records
 

@@ -4,7 +4,7 @@ Updated: 2026-09-30 (Asia/Jerusalem).
 
 ## Current scope
 
-The owner approved all local infrastructure after approving documentation. Dependencies and local validation are included. Real eBay business scenarios and GitHub publication remain pending approval.
+The owner approved all local infrastructure after approving documentation. Dependencies and local validation are included. The initial public GitHub publication is complete. Real eBay business scenarios remain pending approval.
 
 The owner subsequently requested pip/requirements.txt and local execution only. Removed uv.lock and the GitHub Actions workflow. Do not reintroduce CI; GitHub is the submission destination, not an execution requirement.
 
@@ -18,6 +18,7 @@ The owner subsequently requested pip/requirements.txt and local execution only. 
 - Unit and local browser checks, including a deliberately failing child run verifying failure evidence.
 - Allure 3 generation through npm, locked with package-lock.json; no TypeScript automation.
 - Local execution only; no GitHub Actions workflow.
+- Public repository created and pushed: `https://github.com/Ni172/ebay-playwright-automation` on `main`, beginning with commit `1db2595` (`Initial infrastructure and local validation`).
 
 ## Validation
 
@@ -37,7 +38,7 @@ The verified current runtime on this workstation is `.tools/python313-venv` (Pyt
 
 ## Next stage and limitations
 
-pages/ and flows/ are extension packages, not implemented business behavior. No login, shopping flow, eBay page selectors, or business E2E test exists. No Git repository or remote publication was created. No CAPTCHA solving or bypass.
+pages/ and flows/ are extension packages, not implemented business behavior. No login, shopping flow, eBay page selectors, or business E2E test exists. No CAPTCHA solving or bypass.
 
 Before live work, agree authentication mode, currency/locale, subtotal versus delivered total, variant-price policy, cart setup/cleanup, and zero-result outcome. Infrastructure defaults do not decide these questions.
 
