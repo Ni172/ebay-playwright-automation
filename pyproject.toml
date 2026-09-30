@@ -1,0 +1,17 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers --alluredir=artifacts/allure-results --clean-alluredir"
+markers = [
+  "unit: local infrastructure validation without a browser",
+  "infra: browser infrastructure validation using local HTML only",
+  "e2e: real eBay scenarios (requires --run-e2e)",
+]
+log_level = "INFO"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]

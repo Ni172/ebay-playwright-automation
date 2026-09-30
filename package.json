@@ -1,0 +1,12 @@
+{
+  "name": "ebay-automation-reports",
+  "private": true,
+  "description": "Allure report generation only; test implementation is Python",
+  "scripts": {
+    "report": "node -e \"require('fs').rmSync('artifacts/allure-report', { recursive: true, force: true })\" && allure generate artifacts/allure-results --output artifacts/allure-report",
+    "report:open": "allure open artifacts/allure-report"
+  },
+  "devDependencies": {
+    "allure": "^3.0.0"
+  }
+}

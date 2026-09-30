@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.env
+.env.*
+!.env.example
+artifacts/
+test-results/
+allure-results/
+allure-report/
+playwright/.auth/
+*.log
+.idea/
+.tools/
+node_modules/
