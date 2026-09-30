@@ -1,6 +1,6 @@
 # Architecture proposal
 
-Status: shared infrastructure plus BasePage and search submission are implemented. Price filtering, result extraction, product, cart page objects and the shopping flow remain the next stages.
+Status: shared infrastructure, BasePage, search submission, and local XPath result extraction are implemented. Price filtering, live pagination, product, cart page objects and the shopping flow remain the next stages.
 
 ## Stack and scope
 
@@ -62,7 +62,7 @@ ebay-playwright-automation/
     └── test_money.py              # planned focused parsing checks
 ```
 
-The tree above is the business implementation target. Shared configuration, data loading, money parsing, evidence helpers, conftest fixtures, and dependency configuration now exist. BasePage provides only shared navigation and HTTP failure reporting. SearchResultsPage uses semantic locators for search controls and reserves XPath for result-card extraction as the assignment requires. Product, cart and flow packages remain extension points. Runtime artifacts are excluded from commits.
+The tree above is the business implementation target. Shared configuration, data loading, money parsing, evidence helpers, conftest fixtures, and dependency configuration now exist. BasePage provides only shared navigation and HTTP failure reporting. SearchResultsPage uses semantic locators for search controls and XPath to extract unique, loaded-card URLs at or below the ILS limit. Local HTML validates this behavior; eBay's live pagination locator is not yet verified. Product, cart and flow packages remain extension points. Runtime artifacts are excluded from commits.
 
 ## Implemented fixture lifecycle
 

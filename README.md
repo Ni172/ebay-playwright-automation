@@ -4,9 +4,9 @@ Python end-to-end automation assignment for searching eBay products by price, ad
 
 ## Current status
 
-Local infrastructure is implemented: isolated pytest browser fixtures, validated configuration and JSON data, Decimal price parsing, reproducible randomness, screenshots and traces attached to Allure, and local infrastructure checks. The first eBay interaction submits an external search query; price filtering and shopping scenarios are not implemented yet.
+Local infrastructure is implemented: isolated pytest browser fixtures, validated configuration and JSON data, Decimal price parsing, reproducible randomness, screenshots and traces attached to Allure, and local infrastructure checks. Search submission and local XPath extraction of eligible ILS-priced result URLs are implemented; price filtering, live pagination and shopping scenarios are not implemented yet.
 
-Latest local validation: 24 local checks passed and Ruff lint and formatting passed. The live search-submission validation is recorded in the current handoff after its run. Price filtering, result extraction, and shopping functionality are not yet validated.
+Latest local validation: 27 local checks passed and Ruff lint and formatting passed. The live search-submission validation is recorded in the current handoff after its run. Price filtering, live pagination, and shopping functionality are not yet validated.
 
 The latest live search-submission attempt on 2026-09-30 was blocked by eBay with HTTP 403 at the homepage. The Allure report retains the failure screenshot and trace. No retry intended to defeat the block and no bypass was attempted.
 

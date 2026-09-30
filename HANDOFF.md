@@ -21,6 +21,7 @@ The owner subsequently requested pip/requirements.txt and local execution only. 
 - Public repository created and pushed: `https://github.com/Ni172/ebay-playwright-automation` on `main`, beginning with commit `1db2595` (`Initial infrastructure and local validation`).
 - BasePage: only relative navigation with `domcontentloaded` and explicit HTTP failure reporting.
 - SearchResultsPage: semantic locators for the search input and button, plus an XPath result-card locator required by the assignment. The E2E test submits the external JSON query and verifies the results URL. No price filtering, product extraction, cart change, or shopping action is included.
+- Local XPath extraction: SearchResultsPage now returns unique loaded-card URLs at or below the ILS budget, skipping malformed/range prices rather than guessing. Pagination is deliberately deferred until the live eBay locator can be verified.
 
 ## Validation
 
@@ -32,7 +33,7 @@ Readability pass completed at the owner's request: shallower fixture control flo
 
 Browser visibility has one control: Playwright's `--headed` flag in `pyproject.toml` under `addopts`. It is currently enabled; removing that one flag switches browser runs to headless. On 2026-09-30, the legacy `.venv` was verified to run Python 3.13.9 here: all 23 checks, including local Chromium, passed in 3.45 seconds; Ruff check and format verification passed.
 
-On 2026-09-30, the current local suite collected 24 checks: 23 passed and the live search test was skipped without `--run-e2e`; Ruff check and format verification passed. With `--run-e2e`, `tests/e2e/test_search_submission.py` reached eBay but received HTTP 403 on the homepage before the search controls were available. The test recorded `EbayNavigationError`, an Allure `call-failure` screenshot, and a Playwright trace. This run is blocked, not a successful search validation; no retry intended to defeat the block or bypass was attempted.
+On 2026-09-30, the current local suite collected 28 checks: 27 passed and the live search test was skipped without `--run-e2e`; Ruff check and format verification passed. With `--run-e2e`, `tests/e2e/test_search_submission.py` reached eBay but received HTTP 403 on the homepage before the search controls were available. The test recorded `EbayNavigationError`, an Allure `call-failure` screenshot, and a Playwright trace. This run is blocked, not a successful search validation; no retry intended to defeat the block or bypass was attempted.
 
 The prior `AuthenticationPage` and Guest-mode test were removed because the agreed assignment scope does not require authentication. The earlier HTTP 200 Guest homepage evidence is historical only; it does not validate the current search implementation. A separate initial headless read probe received HTTP 403 and was not retried or bypassed.
 
@@ -46,7 +47,7 @@ The verified current runtime on this workstation is `.tools/python313-venv` (Pyt
 
 ## Next stage and limitations
 
-Authentication is out of scope. BasePage and SearchResultsPage are implemented, but price filtering, result extraction, shopping flow, product and cart page objects remain unimplemented. No CAPTCHA solving or bypass.
+Authentication is out of scope. BasePage, search submission, and local result extraction are implemented, but price filtering, live pagination, shopping flow, product and cart page objects remain unimplemented. No CAPTCHA solving or bypass.
 
 Before shopping work, agree subtotal versus delivered total, variant-price policy, cart setup/cleanup, and zero-result outcome. The selected ILS/en-IL context follows the normal local eBay display. Infrastructure defaults do not decide the remaining questions.
 
