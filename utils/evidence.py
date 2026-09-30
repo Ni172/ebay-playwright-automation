@@ -13,7 +13,7 @@ def attach_screenshot(page: Page, name: str) -> None:
         return
 
     try:
-        image = page.screenshot(full_page=True, timeout=5_000)
+        image = page.screenshot(full_page=True, timeout=15_000)
         allure.attach(image, name=name, attachment_type=allure.attachment_type.PNG)
     except Error:
         LOGGER.warning("Could not capture screenshot %s", name, exc_info=True)

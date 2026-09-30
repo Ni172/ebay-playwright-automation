@@ -1,6 +1,6 @@
 # Architecture proposal
 
-Status: shared infrastructure, BasePage, search submission, and local XPath result extraction are implemented. Price filtering, live pagination, product, cart page objects and the shopping flow remain the next stages.
+Status: shared infrastructure, BasePage, search submission, max-price filtering, XPath result extraction, and pagination are implemented. The price-filter and pagination locators are verified only with local HTML; product, cart page objects and the shopping flow remain the next stages.
 
 ## Stack and scope
 

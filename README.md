@@ -4,9 +4,9 @@ Python end-to-end automation assignment for searching eBay products by price, ad
 
 ## Current status
 
-Local infrastructure is implemented: isolated pytest browser fixtures, validated configuration and JSON data, Decimal price parsing, reproducible randomness, screenshots and traces attached to Allure, and local infrastructure checks. Search submission and local XPath extraction of eligible ILS-priced result URLs are implemented; price filtering, live pagination and shopping scenarios are not implemented yet.
+Local infrastructure is implemented: isolated pytest browser fixtures, validated configuration and JSON data, Decimal price parsing, reproducible randomness, screenshots and traces attached to Allure, and local infrastructure checks. Search submission, the optional visible max-price filter, XPath extraction of eligible ILS-priced URLs, and pagination are implemented and locally verified. The price-filter and pagination locators remain unverified against a live eBay result page. Shopping scenarios are not implemented yet.
 
-Latest local validation: 27 local checks passed and Ruff lint and formatting passed. The live search-submission validation is recorded in the current handoff after its run. Price filtering, live pagination, and shopping functionality are not yet validated.
+Latest local validation is recorded in the current handoff. The live search-submission validation passed; the new live price-filter and pagination scenario still requires an owner-run validation. Shopping functionality is not yet validated.
 
 The latest live search-submission attempt on 2026-09-30 was blocked by eBay with HTTP 403 at the homepage. The Allure report retains the failure screenshot and trace. No retry intended to defeat the block and no bypass was attempted.
 
@@ -80,6 +80,7 @@ Useful subsets and debugging:
 python -m pytest -m unit
 python -m pytest -m infra --headed
 python -m pytest --case-file data/search_cases.json
+python -m pytest tests/e2e/test_search_submission.py --run-e2e -vv
 python -m playwright show-trace artifacts/allure-results/<trace-attachment>.zip
 ```
 
@@ -96,7 +97,7 @@ visibility only and does not opt in to real eBay tests.
 
 Results go to `artifacts/allure-results`, and the report to `artifacts/allure-report`. Results are cleaned at the start of each run; archive evidence first if needed. Failure screenshots are best effort for an open `page` during setup/call failures. Allure's pytest log capture is enabled. The failure-pipeline check intentionally fails a child test in a temporary directory; its enclosing check must pass.
 
-Real-site tests must use the `e2e` marker and require `--run-e2e`. The search-submission test opens eBay, submits one external JSON query, verifies the resulting URL, and attaches a screenshot. If eBay blocks access, the test fails explicitly with retained evidence; it does not attempt a bypass. Local infrastructure checks do not access eBay. There is no CI or GitHub Actions workflow.
+Real-site tests must use the `e2e` marker and require `--run-e2e`. The search tests submit one external JSON query; the price-search scenario then attempts eBay's visible max-price filter when present, collects XPath result cards, and follows an enabled Next link until it reaches the requested limit or the pages end. It always rechecks each displayed price locally. If eBay blocks access, the test fails explicitly with retained evidence; it does not attempt a bypass. Local infrastructure checks do not access eBay. There is no CI or GitHub Actions workflow.
 
 ## Decisions pending
 
