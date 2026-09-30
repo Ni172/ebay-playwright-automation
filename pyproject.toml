@@ -1,7 +1,7 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-ra --strict-markers --alluredir=artifacts/allure-results --clean-alluredir"
+addopts = "-ra --strict-markers --alluredir=artifacts/allure-results --clean-alluredir --headed"
 markers = [
   "unit: local infrastructure validation without a browser",
   "infra: browser infrastructure validation using local HTML only",

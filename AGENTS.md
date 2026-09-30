@@ -42,4 +42,4 @@
 - Inside the virtual environment, use `python -m pip install -r requirements.txt`, `python -m pip check`, `python -m ruff check .`, `python -m ruff format --check .`, and `python -m pytest`.
 - Browser infrastructure checks use local HTML. A child pytest run deliberately fails to validate evidence; the enclosing check must pass.
 - Project fixtures own tracing via EBAY_TRACE; do not enable plugin tracing simultaneously.
-- USD/en-US are provisional infrastructure defaults, not settled business assumptions.
+- ILS/en-IL is the agreed eBay business context because it matches the normal local browser display.

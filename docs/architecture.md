@@ -1,10 +1,10 @@
 # Architecture proposal
 
-Status: shared infrastructure implemented. Business page objects and the shopping flow remain the next stage.
+Status: shared infrastructure plus BasePage and search submission are implemented. Price filtering, result extraction, product, cart page objects and the shopping flow remain the next stages.
 
 ## Stack and scope
 
-Use Python, Playwright's synchronous API, pytest with pytest-playwright, and allure-pytest. Use JSON for external cases and environment variables for runtime configuration. Python dependencies are pinned in requirements.txt and installed with pip. pyproject.toml holds pytest/Ruff settings only. Allure 3 reporting dependencies are in package-lock.json; there is no TypeScript automation code. Execution is local only, with no CI workflow.
+Use Python, Playwright's synchronous API, pytest with pytest-playwright, and allure-pytest. Use JSON for external cases and environment variables for runtime configuration. The agreed eBay context is ILS/en-IL, matching the normal local browser display. Python dependencies are pinned in requirements.txt and installed with pip. pyproject.toml holds pytest/Ruff settings only. Allure 3 reporting dependencies are in package-lock.json; there is no TypeScript automation code. Execution is local only, with no CI workflow.
 
 POM classes encapsulate page locators and interactions. A small shopping flow coordinates multiple pages. Tests state expected outcomes and assert them. Fixtures own browser lifecycle, test setup, and evidence attachment. Do not add a generic framework or a BasePage hierarchy without a concrete shared need.
 
@@ -16,14 +16,12 @@ flowchart TD
     Config[Environment configuration] --> Fixtures[Fixtures and browser lifecycle]
     Fixtures --> Tests
     Tests --> Flow[ShoppingFlow]
-    Flow --> Auth[AuthenticationPage]
     Flow --> Search[SearchResultsPage]
     Flow --> Product[ProductPage]
     Flow --> Cart[CartPage]
     Search --> Price[Price parsing with Decimal]
     Product --> Price
     Cart --> Price
-    Auth --> Browser[Playwright Page and BrowserContext]
     Search --> Browser
     Product --> Browser
     Cart --> Browser
@@ -53,10 +51,8 @@ ebay-playwright-automation/
 ├── config/settings.py            # planned validated environment configuration
 ├── data/search_cases.json        # planned query, price, limit and currency inputs
 ├── pages/
-│   ├── authentication_page.py
-│   ├── search_results_page.py
-│   ├── product_page.py
-│   └── cart_page.py
+│   ├── base_page.py
+│   └── search_results_page.py
 ├── flows/shopping_flow.py
 ├── utils/
 │   ├── money.py
@@ -66,7 +62,7 @@ ebay-playwright-automation/
     └── test_money.py              # planned focused parsing checks
 ```
 
-The tree above is the business implementation target. Shared configuration, data loading, money parsing, evidence helpers, conftest fixtures, and dependency configuration now exist. Page/flow packages are extension points without guessed eBay locators. Actual checks live in tests/unit and tests/infra. Runtime artifacts are excluded from commits.
+The tree above is the business implementation target. Shared configuration, data loading, money parsing, evidence helpers, conftest fixtures, and dependency configuration now exist. BasePage provides only shared navigation and HTTP failure reporting. SearchResultsPage uses semantic locators for search controls and reserves XPath for result-card extraction as the assignment requires. Product, cart and flow packages remain extension points. Runtime artifacts are excluded from commits.
 
 ## Implemented fixture lifecycle
 
@@ -83,7 +79,6 @@ The tree above is the business implementation target. Shared configuration, data
 
 | Assignment operation | Proposed owner | Responsibility |
 | --- | --- | --- |
-| Authentication | AuthenticationPage plus setup fixture | Implement the agreed login or documented Guest/Stub behavior |
 | searchItemsByNameUnderPrice | SearchResultsPage | Filter, parse prices, collect unique qualifying URLs through pagination |
 | addItemsToCart | ShoppingFlow using ProductPage | Visit URLs, select available variants, verify successful additions, attach evidence, return to search |
 | assertCartTotalNotExceeds | Test assertion using CartPage | Read the agreed amount and assert it is at most budget per item multiplied by expected count |
@@ -108,9 +103,11 @@ Allure is the primary report. Include scenario parameters, readable steps, selec
 
 Refactoring should follow an initial working vertical slice: move demonstrated duplication into shared helpers while preserving observable behavior. Focused parsing tests protect monetary correctness; a real E2E run validates the integration when the site permits it.
 
-## Open decisions before the first E2E run
+The current live search-submission attempt received eBay HTTP 403 before the search controls appeared. This is reported as a blocked run with an Allure screenshot and trace; the project does not retry to defeat the block or attempt a bypass.
 
-Authentication mode, currency and locale, subtotal versus delivered total, variant-price policy, initial cart state, zero-result handling, and account/site interaction permissions must be resolved. Credentials and saved authentication state stay outside Git.
+## Open decisions before shopping E2E work
+
+No authentication is in scope. ILS/en-IL is agreed. Subtotal versus delivered total, variant-price policy, initial cart state, zero-result handling, and account/site interaction permissions must be resolved before shopping work. Credentials and saved authentication state stay outside Git.
 
 ## Documentation references
 

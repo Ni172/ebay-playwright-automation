@@ -39,8 +39,8 @@ def load_search_cases(path: Path) -> tuple[SearchCase, ...]:
         # bool inherits from int, but true/false is not a valid item limit.
         if type(row["limit"]) is not int or row["limit"] <= 0:
             raise ValueError("limit must be a positive integer")
-        if row["currency"] != "USD":
-            raise ValueError("Only USD cases are currently supported")
+        if row["currency"] != "ILS":
+            raise ValueError("Only ILS cases are currently supported")
         case = SearchCase(
             id=row["id"],
             query=row["query"],

@@ -19,6 +19,7 @@ def test_environment_overrides_defaults(monkeypatch):
     [
         {"timeout_ms": 0},
         {"currency": "EUR"},
+        {"locale": "en-US"},
         {"trace": "invalid"},
         {"base_url": "file:///private"},
     ],
@@ -44,7 +45,7 @@ def test_external_case_is_typed(search_case):
     ],
 )
 def test_invalid_case_fails_before_browser_launch(tmp_path, field, value):
-    row = {"id": "case", "query": "shoes", "max_price": "10", "limit": 5, "currency": "USD"}
+    row = {"id": "case", "query": "shoes", "max_price": "10", "limit": 5, "currency": "ILS"}
     row[field] = value
     path = tmp_path / "cases.json"
     path.write_text(json.dumps([row]), encoding="utf-8")
