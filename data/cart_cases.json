@@ -7,6 +7,7 @@
     "currency": "ILS",
     "expected_min_results": 5,
     "expected_max_results": 5,
-    "expected_page_count": 1
+    "expected_page_count": 1,
+    "expected_counts_by_page": [5]
   }
 ]

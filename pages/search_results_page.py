@@ -14,7 +14,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class EbaySearchError(RuntimeError):
-    """Raised when eBay returns its error page after the bounded recovery attempt."""
+    """Raised when eBay cannot provide the requested search results."""
 
 
 class SearchResultsPage(BasePage):
@@ -294,4 +294,8 @@ class SearchResultsPage(BasePage):
             self.page.wait_for_load_state("domcontentloaded")
         except PlaywrightTimeoutError:
             return False
+        if self.error_page.is_displayed():
+            raise EbaySearchError(
+                "eBay returned its error page after price filtering or pagination"
+            )
         return True

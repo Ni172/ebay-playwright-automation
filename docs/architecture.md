@@ -1,126 +1,71 @@
 # Architecture
 
-Status: shared infrastructure, BasePage, search submission, max-price filtering, XPath result extraction, pagination, ProductPage, and the add-items shopping flow are implemented. Product variants and five cart additions passed one live Chrome-channel run. Cart-total verification remains the next assignment stage.
+Python, synchronous Playwright, pytest, JSON data, and Allure. Local execution only.
 
-## Stack and scope
+## Responsibilities
 
-Use Python, Playwright's synchronous API, pytest with pytest-playwright, and allure-pytest. Use JSON for external cases and environment variables for runtime configuration. The agreed eBay context is ILS/en-IL, matching the normal local browser display. Python dependencies are pinned in requirements.txt and installed with pip. pyproject.toml holds pytest/Ruff settings only. Allure 3 reporting dependencies are in package-lock.json; there is no TypeScript automation code. Execution is local only, with no CI workflow.
-
-POM classes encapsulate page locators and interactions. A small shopping flow coordinates multiple pages. Tests state expected outcomes and assert them. Fixtures own browser lifecycle, test setup, and evidence attachment. Do not add a generic framework or a BasePage hierarchy without a concrete shared need.
-
-## Whiteboard diagram
+| Component | Responsibility |
+| --- | --- |
+| `pages/search_results_page.py` | Search, visible price filter, XPath result extraction, pagination |
+| `pages/product_page.py` | Available variant selection and cart-addition confirmation |
+| `pages/cart_page.py` | Open the cart and read its displayed item count and subtotal |
+| `pages/ebay_error_page.py` | Recognize eBay's known error and use its Home control |
+| `pages/base_page.py` | Shared page access and navigation |
+| `flows/shopping_flow.py` | Visit every supplied URL, record additions, return to search |
+| `utils/cart_assertions.py` | `assert_cart_total_not_exceeds`: exact count and subtotal budget |
+| `utils/money.py` | Strict ILS parsing with `Decimal` |
+| `utils/data_loader.py` | Validate external test data before browser interaction |
+| `utils/evidence.py` | Best-effort screenshots and trace attachments |
+| `conftest.py` | JSON parametrization, isolated contexts, seeds, and evidence lifecycle |
+| `tests/e2e/` | Search expectations and the combined add-to-cart/subtotal scenario |
 
 ```mermaid
 flowchart TD
-    Data[External JSON test cases] --> Tests[pytest E2E tests]
-    Config[Environment configuration] --> Fixtures[Fixtures and browser lifecycle]
-    Fixtures --> Tests
+    Data[JSON cases] --> Tests[pytest tests]
+    Fixtures[Settings and isolated browser fixtures] --> Tests
+    Tests --> Search[SearchResultsPage]
     Tests --> Flow[ShoppingFlow]
-    Flow --> Search[SearchResultsPage]
     Flow --> Product[ProductPage]
-    Flow --> Cart[CartPage]
-    Search --> Price[Price parsing with Decimal]
-    Product --> Price
-    Cart --> Price
-    Search --> Browser
-    Product --> Browser
-    Cart --> Browser
-    Flow --> Evidence[Logs and screenshots]
-    Fixtures --> Evidence
-    Browser --> Trace[Playwright trace]
-    Evidence --> Allure[Allure report]
-    Trace --> Allure
+    Tests --> Assertion[Cart assertion helper]
+    Assertion --> Cart[CartPage]
+    Search --> Money[Decimal price parser]
+    Cart --> Money
+    Fixtures --> Evidence[Allure screenshots and traces]
+    Flow --> Evidence
+    Assertion --> Evidence
 ```
 
-“Whiteboard” is interpreted as this architecture diagram. No application whiteboard feature is required by the supplied assignment.
+## Lifecycle
 
-## Current implementation layout
+The official pytest-playwright plugin owns the browser and closes each context.
+Our context fixture sets timeouts and starts tracing, then attaches the trace before
+plugin cleanup. The report hook captures setup/call failures while the page is open.
+Explicit checkpoints capture search, item, and cart evidence. Screenshot failures log
+warnings without replacing the original test result.
 
-```text
-ebay-playwright-automation/
-├── README.md
-├── AGENTS.md
-├── HANDOFF.md
-├── ReadMeAIBugs.md
-├── docs/architecture.md
-├── requirements.txt              # pinned Python dependencies for pip
-├── pyproject.toml                 # pytest and Ruff configuration
-├── .gitignore                    # generated-output and secret exclusions
-├── .env.example                  # configuration names, no secrets
-├── conftest.py                    # fixtures and evidence hooks
-├── config/settings.py            # validated environment configuration
-├── data/search_cases.json        # search-only scenarios and result expectations
-├── data/search_negative_cases.json # invalid search inputs and expected errors
-├── data/cart_cases.json          # isolated input for the cart mutation scenario
-├── data/cart_negative_cases.json # invalid add-to-cart URL lists and expected errors
-├── pages/
-│   ├── base_page.py
-│   ├── ebay_error_page.py
-│   ├── product_page.py
-│   └── search_results_page.py
-├── flows/shopping_flow.py
-├── utils/
-│   ├── money.py
-│   └── data_loader.py
-└── tests/e2e/
-    ├── test_search_submission.py
-    └── test_add_items_to_cart.py
-```
+Each case receives a fresh guest context. The random seed combines `EBAY_RANDOM_SEED`
+with a stable hash of the test ID and is recorded in Allure. No persistent login is loaded.
 
-The tree above reflects the current business implementation. Shared configuration, data loading, money parsing, evidence helpers, conftest fixtures, and dependency configuration exist. BasePage provides shared navigation and explicit HTTP failure reporting. EbayErrorPage alone owns the locators and click used for eBay's known error screen; business pages only decide whether their current operation may recover or must fail. SearchResultsPage uses semantic locators for search controls and XPath to extract unique, loaded-card URLs at or below the ILS limit. ProductPage selects enabled native variants and eBay button-based listbox variants, then requires evidence that Add to cart succeeded. ShoppingFlow coordinates every supplied URL in order, per-item evidence, and return to the search page. The assignment-aligned no-reserve cart module passed an isolated live Chrome-channel run with all five required additions. Identification, CartPage, and cart-total verification are not implemented yet. Runtime artifacts are excluded from commits.
+## Business rules
 
-## Implemented fixture lifecycle
+- Search types minimum zero and the requested maximum into the visible ILS fields,
+  commits with Tab, submits the price filter, and verifies `_udhi` before extraction.
+- Result cards are read through XPath. Each price is checked locally; ambiguous prices
+  are excluded. URLs are unique and pagination stops at the limit or end of results.
+- Three search rows cover five results, zero results, and 65 results across two pages.
+  The separate cart row requires every one of five returned URLs.
+- Product selections use available variants. Confirmed additions receive a log and screenshot.
+- Cart verification reads the site's Subtotal, including its displayed shipping charges.
+  It requires the expected item count and compares against `budget_per_item * items_count`.
+  Selected-variant price changes are reflected in this final comparison.
+- Shipping can make the scenario exceed its budget even when all search prices qualify.
+  This is an assertion failure, not a reason to reduce coverage or change the threshold.
+- Missing, ambiguous, or non-ILS cart values fail; an empty cart cannot pass the shopping case.
+- Known initial search/product errors allow one recovery through Home. A failed return to
+  search may continue from Home without repeating a confirmed addition. No CAPTCHA bypass.
 
-- Session settings load after explicit .env bootstrap. The official plugin owns the browser process.
-- Function-scoped context extends the official context with timeouts and tracing. It attaches the trace before plugin cleanup closes the context.
-- The plugin page fixture supplies a fresh page inside each isolated context.
-- A pytest report hook records outcomes and screenshots setup/call failures while the page is open.
-- JSON parametrization validates cases before execution. The rng fixture derives a stable seed from the configured seed and test node ID.
-- Explicit screenshot checkpoints support future page flows. Allure captures logs and random seeds.
-- Additional new_context contexts are isolated but do not receive custom tracing. Use the primary context for scenario evidence.
-- Default tracing is on. Retain-on-failure covers failures known before context teardown; teardown-only failures need the default on mode.
+## Remaining scope
 
-## Main behaviors
-
-| Assignment operation | Proposed owner | Responsibility |
-| --- | --- | --- |
-| identify | Pending Guest flow or Login Stub | Establish the agreed user state without storing credentials |
-| searchItemsByNameUnderPrice | SearchResultsPage | Filter, parse prices, collect unique qualifying URLs through pagination |
-| addItemsToCart | ShoppingFlow using ProductPage | Visit URLs, select available variants, verify successful additions, attach evidence, return to search |
-| assertCartTotalNotExceeds | Test assertion using CartPage | Read the agreed amount and assert it is at most budget per item multiplied by expected count |
-
-Python identifiers will use snake_case equivalents. The final structure must preserve these four recognizable operations, including an `assert_cart_total_not_exceeds` helper if needed for direct traceability.
-
-## Reliability decisions
-
-- Use XPath for result extraction as explicitly required. Elsewhere prefer meaningful role, label, or stable attribute locators after inspecting the actual site.
-- Apply the range through the exact ILS accessible labels, typing minimum zero and the requested maximum sequentially and leaving each controlled input with `Tab`. Submit through XPath `//button[@title='Submit price range']` and verify `_udhi` in the resulting URL; do not force-click a disabled control or silently scan unfiltered pages when submission fails.
-- Use Playwright's condition-based waiting and retrying assertions instead of fixed sleeps.
-- Deduplicate URLs, record visited result pages, detect repeated pagination pages, and stop at the requested limit or end of results.
-- Recover from eBay's known error page through its visible `Go to homepage` control. Search and product navigation retry once; a failed return to results continues from Home so a confirmed Add to cart action is never repeated. Repeated errors fail explicitly.
-- Parse amounts with `Decimal`, retaining currency information. Do not compare mixed currencies or blindly strip punctuation. Explicitly handle or reject ambiguous price ranges.
-- Choose only available variants. Record the random seed and selected values so a failure can be investigated. Recheck the resulting price before adding; the policy for an over-budget variant remains pending.
-- Confirm cart additions rather than assuming a click succeeded. A failed addition must not reduce the expected count silently and produce a passing test.
-- Treat every supplied URL as required. If a listing becomes ended or unavailable between search and product navigation, capture evidence and fail instead of skipping or replacing it.
-- Start from a controlled cart state. Do not remove a user's existing items without agreement.
-- Zero results are valid for the search function. Define an explicit E2E outcome so an empty search does not masquerade as a completed shopping scenario.
-- CAPTCHA solving, bypass, and retries aimed at defeating CAPTCHA are out of scope. Capture the blocker and report it honestly.
-
-## Reporting and debugging
-
-Allure is the primary report. Include scenario parameters, readable steps, selected variants, per-item success evidence, and cart evidence. Configure Playwright trace retention during implementation and link or attach traces for investigation. Never label a blocked or unexecuted run as successful.
-
-Refactoring should follow an initial working vertical slice: move demonstrated duplication into shared helpers while preserving observable behavior. Real E2E runs validate the integration when the site permits it.
-
-The three current positive search cases each passed an isolated live run: ILS 220 with five results, ILS 0.01 with zero results, and ILS 220 with 65 results contributed as 60 from page one and five from page two. The assignment-aligned add-to-cart module separately passed its live Chrome run with all five supplied URLs. Static checks and collection cover all 17 current cases; the current matrix has not been rerun as one combined live suite after the latest price-input correction. Because eBay availability is external, later runs may still return HTTP 403 or the site's known error page. Those outcomes must be retained as evidence and reported honestly; the project does not attempt to defeat a block or CAPTCHA.
-
-## Open decisions for the remaining assignment work
-
-ILS/en-IL is agreed. The add-items flow rejects an empty URL list and does not clear an existing cart. Identification must still be defined as a Guest flow or Login Stub. Subtotal versus delivered total, variant-price policy after a selection changes the displayed price, and controlled cart state must be resolved before cart-total verification is implemented. Credentials and saved authentication state stay outside Git.
-
-## Documentation references
-
-- [Playwright Python and the recommended pytest plugin](https://playwright.dev/python/docs/intro)
-- [Allure pytest integration](https://allurereport.org/docs/pytest/)
-
-The source assignment is the requirements reference. Its instructions do not independently authorize executing code, modifying a remote cart, or publishing a repository.
+Identification as an explicit Guest function and the bug-review exercise remain pending.
+The assignment's unaided bug-review condition must not be claimed for assisted work.
+See [HANDOFF.md](../HANDOFF.md) for current verification and limitations.

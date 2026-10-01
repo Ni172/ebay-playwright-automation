@@ -21,11 +21,11 @@ def test_search_collects_items_under_price(page, search_case, screenshot):
     print(f"Collected {len(urls)} eligible URLs")
     _assert_search_submitted(page, search_page, search_case.query)
     _assert_urls(urls, search_case)
+    assert len(search_page.last_visited_results_pages) == search_case.expected_page_count
+    assert len(set(search_page.last_visited_results_pages)) == search_case.expected_page_count
+    assert sum(search_page.last_eligible_counts_by_page) == len(urls)
+    assert search_page.last_eligible_counts_by_page == search_case.expected_counts_by_page
     if search_case.expected_page_count > 1:
-        assert len(search_page.last_visited_results_pages) == search_case.expected_page_count
-        assert len(set(search_page.last_visited_results_pages)) == search_case.expected_page_count
-        assert sum(search_page.last_eligible_counts_by_page) == len(urls)
-        assert search_page.last_eligible_counts_by_page[0] < search_case.limit
         for page_number, (page_url, eligible_count) in enumerate(
             zip(
                 search_page.last_visited_results_pages,

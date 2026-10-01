@@ -10,7 +10,6 @@ from playwright.sync_api import BrowserContext, Page
 
 from config.settings import ROOT, Settings
 from utils.data_loader import (
-    SearchCase,
     load_invalid_cart_cases,
     load_invalid_search_cases,
     load_search_cases,
@@ -148,13 +147,8 @@ def rng(settings: Settings, request: pytest.FixtureRequest) -> random.Random:
 
 
 @pytest.fixture
-def search_cases(pytestconfig: pytest.Config) -> tuple[SearchCase, ...]:
-    return load_search_cases(Path(pytestconfig.getoption("--case-file")))
-
-
-@pytest.fixture
 def screenshot(page: Page) -> Callable[[str], None]:
-    """Explicit checkpoints for item and cart evidence in future page flows."""
+    """Attach visible item, search, and cart checkpoints to Allure."""
 
     def capture(name: str) -> None:
         attach_screenshot(page, name)

@@ -3,7 +3,9 @@
 import pytest
 
 from flows.shopping_flow import ShoppingFlow
+from pages.cart_page import CartPage
 from pages.search_results_page import SearchResultsPage
+from utils.cart_assertions import assert_cart_total_not_exceeds
 
 pytestmark = pytest.mark.e2e
 
@@ -32,6 +34,8 @@ def test_searches_and_adds_every_eligible_item(page, cart_case, rng, screenshot)
         item_summary = f"Confirmed item {item_number}/{len(urls)}: {item.url};"
         item_summary += f" variants={variant_summary or 'none'}"
         print(item_summary)
+
+    assert_cart_total_not_exceeds(CartPage(page), cart_case.max_price, cart_case.limit, screenshot)
 
 
 def test_add_items_to_cart_rejects_invalid_urls_before_navigation(

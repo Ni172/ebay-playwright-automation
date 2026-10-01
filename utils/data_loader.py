@@ -12,6 +12,7 @@ REQUIRED_FIELDS = {
     "expected_min_results",
     "expected_max_results",
     "expected_page_count",
+    "expected_counts_by_page",
 }
 NEGATIVE_REQUIRED_FIELDS = {"id", "query", "max_price", "limit", "expected_message"}
 INVALID_CART_REQUIRED_FIELDS = {"id", "urls", "expected_message"}
@@ -27,6 +28,7 @@ class SearchCase:
     expected_min_results: int
     expected_max_results: int
     expected_page_count: int
+    expected_counts_by_page: tuple[int, ...]
 
 
 @dataclass(frozen=True)
@@ -56,7 +58,8 @@ def load_search_cases(path: Path) -> tuple[SearchCase, ...]:
         if not isinstance(row, dict) or set(row) != REQUIRED_FIELDS:
             raise ValueError(
                 "Each case needs id, query, max_price, limit, currency, "
-                "expected_min_results, expected_max_results and expected_page_count"
+                "expected_min_results, expected_max_results, expected_page_count "
+                "and expected_counts_by_page"
             )
         for field in ("id", "query"):
             if not isinstance(row[field], str) or not row[field].strip():
@@ -83,6 +86,15 @@ def load_search_cases(path: Path) -> tuple[SearchCase, ...]:
             raise ValueError("expected_max_results must not exceed limit")
         if type(row["expected_page_count"]) is not int or row["expected_page_count"] <= 0:
             raise ValueError("expected_page_count must be a positive integer")
+        counts = row["expected_counts_by_page"]
+        if not isinstance(counts, list) or any(
+            type(count) is not int or count < 0 for count in counts
+        ):
+            raise ValueError("expected_counts_by_page must contain non-negative integers")
+        if len(counts) != row["expected_page_count"]:
+            raise ValueError("expected_counts_by_page must match expected_page_count")
+        if not row["expected_min_results"] <= sum(counts) <= row["expected_max_results"]:
+            raise ValueError("expected_counts_by_page must match the expected result range")
         case = SearchCase(
             id=row["id"],
             query=row["query"],
@@ -92,6 +104,7 @@ def load_search_cases(path: Path) -> tuple[SearchCase, ...]:
             expected_min_results=row["expected_min_results"],
             expected_max_results=row["expected_max_results"],
             expected_page_count=row["expected_page_count"],
+            expected_counts_by_page=tuple(counts),
         )
         cases.append(case)
         seen_ids.add(case.id)
