@@ -4,6 +4,7 @@ import logging
 import random
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 from playwright.sync_api import Page, Response
 
@@ -20,10 +21,6 @@ class AddedItem:
 
     url: str
     variants: tuple[VariantSelection, ...]
-
-
-class InsufficientAddableItemsError(RuntimeError):
-    """Raised when the candidate pool cannot satisfy the requested item count."""
 
 
 class ShoppingFlow:
@@ -44,59 +41,53 @@ class ShoppingFlow:
     def add_items_to_cart(
         self,
         urls: Sequence[str],
-        *,
-        expected_count: int | None = None,
     ) -> list[AddedItem]:
-        """Add the expected count, using later URLs only for unavailable listings."""
-        if not urls:
-            raise ValueError("add_items_to_cart requires at least one product URL")
-        required_count = len(urls) if expected_count is None else expected_count
-        if required_count <= 0:
-            raise ValueError("expected_count must be positive")
-        if required_count > len(urls):
-            raise ValueError("expected_count cannot exceed the number of candidate URLs")
+        """Open every supplied eBay product URL and add it to the cart."""
+        self._validate_product_urls(urls)
 
         search_url = self.page.url
         added_items: list[AddedItem] = []
 
-        for candidate_number, url in enumerate(urls, start=1):
+        for item_number, url in enumerate(urls, start=1):
             self._open_product(url)
             try:
                 self.product_page.require_available_listing()
                 variants = self.product_page.select_available_variants(self.rng)
                 self.product_page.add_to_cart()
             except ProductUnavailableError:
-                LOGGER.warning(
-                    "Candidate %d/%d is unavailable and will be replaced: %s",
-                    candidate_number,
+                LOGGER.error(
+                    "Required item %d/%d is unavailable: %s",
+                    item_number,
                     len(urls),
                     url,
                 )
-                self.capture_screenshot(f"unavailable-candidate-{candidate_number}")
-                self._return_to_search(search_url)
-                continue
+                self.capture_screenshot(f"unavailable-item-{item_number}")
+                raise
 
             added_item = AddedItem(url=url, variants=variants)
             added_items.append(added_item)
-            item_number = len(added_items)
             LOGGER.info(
                 "Added item %d/%d: %s; variants=%s",
                 item_number,
-                required_count,
+                len(urls),
                 url,
                 self._format_variants(variants),
             )
             self.capture_screenshot(f"added-item-{item_number}")
             self._return_to_search(search_url)
-            if len(added_items) == required_count:
-                break
-
-        if len(added_items) != required_count:
-            raise InsufficientAddableItemsError(
-                f"Added {len(added_items)} of {required_count} required items "
-                f"after trying {len(urls)} candidates"
-            )
         return added_items
+
+    @staticmethod
+    def _validate_product_urls(urls: Sequence[str]) -> None:
+        if not urls:
+            raise ValueError("add_items_to_cart requires at least one product URL")
+
+        for url in urls:
+            if not isinstance(url, str) or not url.strip():
+                raise ValueError("Each product URL must be a non-empty string")
+            parsed_url = urlsplit(url)
+            if parsed_url.scheme != "https" or parsed_url.hostname != "www.ebay.com":
+                raise ValueError("Each product URL must be an HTTPS www.ebay.com URL")
 
     def _open_product(self, url: str) -> None:
         response = self.page.goto(url, wait_until="domcontentloaded")

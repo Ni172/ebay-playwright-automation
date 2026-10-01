@@ -1,0 +1,17 @@
+[
+  {
+    "id": "empty-url-list",
+    "urls": [],
+    "expected_message": "requires at least one product URL"
+  },
+  {
+    "id": "blank-url",
+    "urls": ["   "],
+    "expected_message": "non-empty string"
+  },
+  {
+    "id": "external-product-url",
+    "urls": ["https://example.com/itm/not-ebay"],
+    "expected_message": "HTTPS www.ebay.com URL"
+  }
+]

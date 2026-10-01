@@ -1,4 +1,4 @@
-# Architecture proposal
+# Architecture
 
 Status: shared infrastructure, BasePage, search submission, max-price filtering, XPath result extraction, pagination, ProductPage, and the add-items shopping flow are implemented. Product variants and five cart additions passed one live Chrome-channel run. Cart-total verification remains the next assignment stage.
 
@@ -52,6 +52,7 @@ ebay-playwright-automation/
 ├── data/search_cases.json        # search-only scenarios and result expectations
 ├── data/search_negative_cases.json # invalid search inputs and expected errors
 ├── data/cart_cases.json          # isolated input for the cart mutation scenario
+├── data/cart_negative_cases.json # invalid add-to-cart URL lists and expected errors
 ├── pages/
 │   ├── base_page.py
 │   ├── ebay_error_page.py
@@ -66,7 +67,7 @@ ebay-playwright-automation/
     └── test_add_items_to_cart.py
 ```
 
-The tree above reflects the current business implementation. Shared configuration, data loading, money parsing, evidence helpers, conftest fixtures, and dependency configuration exist. BasePage provides shared navigation and explicit HTTP failure reporting. EbayErrorPage alone owns the locators and click used for eBay's known error screen; business pages only decide whether their current operation may recover or must fail. SearchResultsPage uses semantic locators for search controls and XPath to extract unique, loaded-card URLs at or below the ILS limit. ProductPage selects enabled native variants and eBay button-based listbox variants, then requires evidence that Add to cart succeeded. ShoppingFlow coordinates every requested URL, evidence, reserve replacements, and return to the search page. One five-item live Chrome-channel run passed. CartPage and cart-total verification are not implemented yet. Runtime artifacts are excluded from commits.
+The tree above reflects the current business implementation. Shared configuration, data loading, money parsing, evidence helpers, conftest fixtures, and dependency configuration exist. BasePage provides shared navigation and explicit HTTP failure reporting. EbayErrorPage alone owns the locators and click used for eBay's known error screen; business pages only decide whether their current operation may recover or must fail. SearchResultsPage uses semantic locators for search controls and XPath to extract unique, loaded-card URLs at or below the ILS limit. ProductPage selects enabled native variants and eBay button-based listbox variants, then requires evidence that Add to cart succeeded. ShoppingFlow coordinates every supplied URL in order, per-item evidence, and return to the search page. The assignment-aligned no-reserve cart module passed an isolated live Chrome-channel run with all five required additions. Identification, CartPage, and cart-total verification are not implemented yet. Runtime artifacts are excluded from commits.
 
 ## Implemented fixture lifecycle
 
@@ -83,6 +84,7 @@ The tree above reflects the current business implementation. Shared configuratio
 
 | Assignment operation | Proposed owner | Responsibility |
 | --- | --- | --- |
+| identify | Pending Guest flow or Login Stub | Establish the agreed user state without storing credentials |
 | searchItemsByNameUnderPrice | SearchResultsPage | Filter, parse prices, collect unique qualifying URLs through pagination |
 | addItemsToCart | ShoppingFlow using ProductPage | Visit URLs, select available variants, verify successful additions, attach evidence, return to search |
 | assertCartTotalNotExceeds | Test assertion using CartPage | Read the agreed amount and assert it is at most budget per item multiplied by expected count |
@@ -92,13 +94,14 @@ Python identifiers will use snake_case equivalents. The final structure must pre
 ## Reliability decisions
 
 - Use XPath for result extraction as explicitly required. Elsewhere prefer meaningful role, label, or stable attribute locators after inspecting the actual site.
+- Apply the range through the exact ILS accessible labels, typing minimum zero and the requested maximum sequentially and leaving each controlled input with `Tab`. Submit through XPath `//button[@title='Submit price range']` and verify `_udhi` in the resulting URL; do not force-click a disabled control or silently scan unfiltered pages when submission fails.
 - Use Playwright's condition-based waiting and retrying assertions instead of fixed sleeps.
 - Deduplicate URLs, record visited result pages, detect repeated pagination pages, and stop at the requested limit or end of results.
 - Recover from eBay's known error page through its visible `Go to homepage` control. Search and product navigation retry once; a failed return to results continues from Home so a confirmed Add to cart action is never repeated. Repeated errors fail explicitly.
 - Parse amounts with `Decimal`, retaining currency information. Do not compare mixed currencies or blindly strip punctuation. Explicitly handle or reject ambiguous price ranges.
 - Choose only available variants. Record the random seed and selected values so a failure can be investigated. Recheck the resulting price before adding; the policy for an over-budget variant remains pending.
 - Confirm cart additions rather than assuming a click succeeded. A failed addition must not reduce the expected count silently and produce a passing test.
-- Keep a small reserve candidate pool for live-site listings that become ended or unavailable between search and product navigation. Record every replacement and still require the original expected item count; do not skip other failures.
+- Treat every supplied URL as required. If a listing becomes ended or unavailable between search and product navigation, capture evidence and fail instead of skipping or replacing it.
 - Start from a controlled cart state. Do not remove a user's existing items without agreement.
 - Zero results are valid for the search function. Define an explicit E2E outcome so an empty search does not masquerade as a completed shopping scenario.
 - CAPTCHA solving, bypass, and retries aimed at defeating CAPTCHA are out of scope. Capture the blocker and report it honestly.
@@ -107,9 +110,9 @@ Python identifiers will use snake_case equivalents. The final structure must pre
 
 Allure is the primary report. Include scenario parameters, readable steps, selected variants, per-item success evidence, and cart evidence. Configure Playwright trace retention during implementation and link or attach traces for investigation. Never label a blocked or unexecuted run as successful.
 
-Refactoring should follow an initial working vertical slice: move demonstrated duplication into shared helpers while preserving observable behavior. Focused parsing tests protect monetary correctness; a real E2E run validates the integration when the site permits it.
+Refactoring should follow an initial working vertical slice: move demonstrated duplication into shared helpers while preserving observable behavior. Real E2E runs validate the integration when the site permits it.
 
-The latest complete live Chrome run passed the three scenarios that existed before the expanded search matrix. Static checks and collection cover the new cases, but the fewer-than-five, high-price, pagination, and negative-request cases have not yet received an approved live run. Because eBay availability is external, later runs may still return HTTP 403 or the site's known error page. Those outcomes must be retained as evidence and reported honestly; the project does not attempt to defeat a block or CAPTCHA.
+The three current positive search cases each passed an isolated live run: ILS 220 with five results, ILS 0.01 with zero results, and ILS 220 with 65 results contributed as 60 from page one and five from page two. The assignment-aligned add-to-cart module separately passed its live Chrome run with all five supplied URLs. Static checks and collection cover all 17 current cases; the current matrix has not been rerun as one combined live suite after the latest price-input correction. Because eBay availability is external, later runs may still return HTTP 403 or the site's known error page. Those outcomes must be retained as evidence and reported honestly; the project does not attempt to defeat a block or CAPTCHA.
 
 ## Open decisions for the remaining assignment work
 

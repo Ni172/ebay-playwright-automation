@@ -15,56 +15,56 @@
   },
   {
     "id": "zero-price",
-    "query": "shirts",
+    "query": "shoes",
     "max_price": "0",
     "limit": 5,
     "expected_message": "max_price"
   },
   {
     "id": "negative-price",
-    "query": "shirts",
+    "query": "shoes",
     "max_price": "-1",
     "limit": 5,
     "expected_message": "max_price"
   },
   {
     "id": "nan-price",
-    "query": "shirts",
+    "query": "shoes",
     "max_price": "NaN",
     "limit": 5,
     "expected_message": "max_price"
   },
   {
     "id": "infinite-price",
-    "query": "shirts",
+    "query": "shoes",
     "max_price": "Infinity",
     "limit": 5,
     "expected_message": "max_price"
   },
   {
     "id": "zero-limit",
-    "query": "t-shirts",
+    "query": "shoes",
     "max_price": "220",
     "limit": 0,
     "expected_message": "limit"
   },
   {
     "id": "negative-limit",
-    "query": "t-shirts",
+    "query": "shoes",
     "max_price": "220",
     "limit": -1,
     "expected_message": "limit"
   },
   {
     "id": "boolean-limit",
-    "query": "t-shirts",
+    "query": "shoes",
     "max_price": "220",
     "limit": true,
     "expected_message": "limit"
   },
   {
     "id": "decimal-limit",
-    "query": "t-shirts",
+    "query": "shoes",
     "max_price": "220",
     "limit": 1.5,
     "expected_message": "limit"

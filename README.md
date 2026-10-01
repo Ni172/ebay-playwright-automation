@@ -1,18 +1,18 @@
 # eBay Playwright Automation
 
-Python end-to-end automation assignment for searching eBay products by price, adding eligible items to the cart, and verifying the cart amount. The planned implementation uses Playwright, pytest, Page Object Model (POM), and Allure.
+Python end-to-end automation assignment for searching eBay products by price, adding eligible items to the cart, and verifying the cart amount. The implementation uses Playwright, pytest, Page Object Model (POM), and Allure. Search and add-to-cart are implemented; identification and cart-total verification remain pending stages.
 
 The original assignment is retained in [`docs/assignment/automation-developer-assignment.docx`](docs/assignment/automation-developer-assignment.docx).
 
 ## Current status
 
-The repository exposes real eBay E2E scenarios plus request-validation cases that fail before navigation. Shared pytest fixtures provide isolated browser contexts, validated JSON data, reproducible randomness, screenshots, traces, and Allure output. Search submission, optional max-price filtering, XPath result extraction, pagination, ProductPage, and ShoppingFlow are implemented. The latest completed full Google Chrome run predates the expanded search matrix; it passed the earlier three scenarios and confirmed exactly five cart additions.
+The repository exposes real eBay E2E scenarios plus request-validation cases that fail before navigation. Shared pytest fixtures provide isolated browser contexts, validated JSON data, reproducible randomness, screenshots, traces, and Allure output. Search submission, optional max-price filtering, XPath result extraction, pagination, ProductPage, and ShoppingFlow are implemented. The current three positive search cases have each passed in isolated live runs: five results at ILS 220, zero results at ILS 0.01, and 65 results across two pages at ILS 220. The assignment-aligned add-to-cart module also passed its isolated live Chrome run with five required URLs and three pre-navigation validation cases. The current 17-case matrix has not been rerun as one combined suite after the latest price-input correction.
 
 If eBay returns its known `Something went wrong on our end` page, shared navigation uses the visible `Go to homepage` control. Search resubmits the original query once. ShoppingFlow retries a product URL once, while a failure returning to search falls back to Home and continues without repeating the already confirmed Add to cart action. An error before cart confirmation also returns Home but fails without clicking Add to cart again. Repeated errors fail explicitly; recovery never loops or attempts to bypass a block.
 
-Latest validation is recorded in the current handoff. eBay availability is external and can change between runs; a site error is recorded honestly instead of being bypassed.
+Latest validation is recorded in the current handoff. eBay availability is external and can change between runs; a site error is recorded honestly instead of being bypassed. The price-range interaction types zero into `Minimum Value in ILS`, types the case maximum into `Maximum Value in ILS`, leaves each field with `Tab` so eBay commits its controlled input, submits through XPath `//button[@title='Submit price range']`, and requires the resulting URL to contain the matching `_udhi` value before result extraction begins.
 
-The live cart scenario requests five eligible products plus up to three reserve candidates. ShoppingFlow replaces only listings that eBay explicitly marks ended or unavailable, with a warning and screenshot. It still requires exactly five confirmed additions and fails if the reserve pool is exhausted; other product or cart errors are never skipped.
+The live cart scenario requests five eligible product URLs and passes that exact list to `add_items_to_cart`. ShoppingFlow visits every supplied URL in order, selects available variants, confirms the cart addition, records a log and screenshot, and returns to the search page. An ended or unavailable required listing is captured and fails the scenario; it is not silently skipped or replaced by an extra URL.
 
 ## Requirements
 
@@ -33,7 +33,7 @@ The live cart scenario requests five eligible products plus up to three reserve 
 
 See [architecture and diagram](docs/architecture.md) for component responsibilities, proposed file layout, and decisions needed before implementation.
 
-The selected approach is Python with the Playwright synchronous API, the official pytest Playwright plugin, and Allure's pytest integration. Prices will use `Decimal`. The design stays small enough for the assignment's stated 3–4 hours of implementation.
+The selected approach is Python with the Playwright synchronous API, the official pytest Playwright plugin, and Allure's pytest integration. Prices use `Decimal`. The design stays small enough for the assignment's stated 3–4 hours of implementation.
 
 ## Running the project
 
@@ -87,9 +87,9 @@ python -m pytest tests/e2e/test_add_items_to_cart.py --run-e2e --browser-channel
 python -m playwright show-trace artifacts/allure-results/<trace-attachment>.zip
 ```
 
-`search_case` parametrizes valid search coverage from `data/search_cases.json`. `negative_search_case` reads invalid inputs and expected errors from `data/search_negative_cases.json`. `cart_case` independently reads `data/cart_cases.json`, so additional search cases do not add more products to the live cart scenario. `search_cases` returns the full valid search dataset. `rng` provides a per-test generator with its seed recorded in Allure. `screenshot("checkpoint-name")` attaches evidence. `page` and `context` preserve the plugin's lifecycle and per-test isolation. Override the datasets with `--case-file`, `--negative-case-file`, and `--cart-case-file` respectively.
+`search_case` parametrizes valid search coverage from `data/search_cases.json`. `negative_search_case` reads invalid inputs and expected errors from `data/search_negative_cases.json`. `cart_case` independently reads `data/cart_cases.json`, while `invalid_cart_case` reads invalid URL lists from `data/cart_negative_cases.json`. `search_cases` returns the full valid search dataset. `rng` provides a per-test generator with its seed recorded in Allure. `screenshot("checkpoint-name")` attaches evidence. `page` and `context` preserve the plugin's lifecycle and per-test isolation. Override the datasets with `--case-file`, `--negative-case-file`, `--cart-case-file`, and `--invalid-cart-case-file` respectively.
 
-Screenshots use a 1920x1080 browser viewport and capture the visible viewport rather than the entire scrollable page. Before capture, the evidence helper waits conditionally for the completed document, loaded fonts, and images intersecting the viewport; animations are disabled during capture. A bounded timeout prevents a stalled external asset from suppressing all evidence. Playwright traces retain the broader debugging context.
+Headed Chromium/Chrome starts maximized and Playwright uses the browser's native viewport instead of forcing a fixed resolution. Screenshots capture that visible viewport rather than the entire scrollable page, so the interactive run and its evidence show the same customer-sized window. Before capture, the evidence helper waits conditionally for the completed document, loaded fonts, and images intersecting the viewport; animations are disabled during capture. A bounded timeout prevents a stalled external asset from suppressing all evidence. Playwright traces retain the broader debugging context.
 
 Optional `.env` values appear in `.env.example`; actual environment variables take precedence. ILS/en-IL is the agreed configuration because eBay displayed Israeli shekels in the normal local browser context. Other currencies/locales fail explicitly until supported. `--base-url` overrides the environment base URL.
 
@@ -109,15 +109,15 @@ Pytest uses `--capture=tee-sys`, so `print()` output remains visible in the term
 
 Results go to `artifacts/allure-results`, and the report to `artifacts/allure-report`. Results are cleaned at the start of each run; archive evidence first if needed. Failure screenshots are best effort for an open `page` during setup/call failures. Allure's pytest log capture is enabled.
 
-The suite uses the `e2e` marker and requires `--run-e2e`. The external search matrix covers `shoes` at ILS 220, `womens t-shirts` with a valid result containing fewer than five URLs, and a 121-result `t-shirts` case that must visit exactly three distinct result pages. The pagination case records and prints each page URL and the number of unique eligible URLs it contributed, proving that the earlier pages did not satisfy the requested limit before `Next` was used. Search attempts eBay's visible max-price filter when present, collects XPath result cards, follows an enabled Next link until it reaches the requested limit or the pages end, and rechecks every displayed price locally. Externally supplied negative cases in the same E2E module reject blank queries, invalid prices, and invalid limits before navigation. If eBay blocks access, a live scenario stops explicitly with retained evidence; it does not attempt a bypass. There is no CI or GitHub Actions workflow.
+The suite uses the `e2e` marker and requires `--run-e2e`. The external search matrix uses only `shoes` and contains three approved cases: ILS 220 with the default five-item limit, ILS 0.01 expecting zero results without pagination, and ILS 220 with a 65-item limit that must collect 60 URLs from page one and five from page two. The pagination case records and prints each page URL and the number of unique eligible URLs it contributed. Search fills the visible ILS minimum with zero and the maximum with the case value, requires the resulting `_udhi` URL value, collects XPath result cards, follows an enabled Next link until it reaches the requested limit or the pages end, and rechecks every displayed price locally. Externally supplied negative cases in the same E2E module reject blank queries, invalid prices, and invalid limits before navigation. If eBay blocks access, a live scenario stops explicitly with retained evidence; it does not attempt a bypass. There is no CI or GitHub Actions workflow.
 
 ## Decisions pending
 
 - Authentication is out of scope. Any future real-account login requires separate approval and credentials supplied outside source control.
 - Whether the asserted amount is the items subtotal or a total including delivery and taxes.
-- Behavior when a selected variant changes the eligible price or a product cannot be added.
+- Behavior when a selected variant changes the eligible price.
 - Empty-cart setup and cleanup, including permission before modifying an existing account cart.
-- The live stability of the new fewer-than-five and forced-pagination search cases must be confirmed against eBay before their thresholds are treated as final evidence.
+- The current 17-case matrix still needs one combined live Chrome run after all assignment stages are implemented and approved for execution.
 
 ## GitHub submission
 

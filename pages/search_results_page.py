@@ -1,8 +1,8 @@
 """Search-page interactions and result-card locators for eBay."""
 
 import logging
-from decimal import Decimal
-from urllib.parse import urljoin
+from decimal import Decimal, InvalidOperation
+from urllib.parse import parse_qs, urljoin, urlsplit
 
 from playwright.sync_api import Locator, Page, Response
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -26,8 +26,9 @@ class SearchResultsPage(BasePage):
     _SEARCH_INPUT_PLACEHOLDER = "Search for anything"
     _SHIPPING_DIALOG_TEXT = "Are you shipping to"
     _CONFIRM_BUTTON_NAME = "Confirm"
-    _MAX_PRICE_INPUT = "input[aria-label*='Max'], input[name*='maxPrice']"
-    _APPLY_PRICE_BUTTON = "button:has-text('Apply')"
+    _MIN_PRICE_INPUT_LABEL = "Minimum Value in ILS"
+    _MAX_PRICE_INPUT_LABEL = "Maximum Value in ILS"
+    _SUBMIT_PRICE_RANGE_XPATH = "xpath=//button[@title='Submit price range']"
     _PRICE_FILTER_CONTROL = "button:has-text('Price'), summary:has-text('Price')"
     _NEXT_PAGE_XPATH = (
         "xpath=//a[contains(@class, 'pagination__next') and @href and not(@aria-disabled='true')]"
@@ -160,8 +161,10 @@ class SearchResultsPage(BasePage):
 
     def apply_max_price_filter(self, max_price: Decimal) -> bool:
         """Use the visible eBay max-price control when the current layout offers it."""
-        max_input = self.page.locator(self._MAX_PRICE_INPUT).first
+        min_input = self.page.get_by_role("textbox", name=self._MIN_PRICE_INPUT_LABEL, exact=True)
+        max_input = self.page.get_by_role("textbox", name=self._MAX_PRICE_INPUT_LABEL, exact=True)
         try:
+            min_input.wait_for(state="visible", timeout=2_000)
             max_input.wait_for(state="visible", timeout=2_000)
         except PlaywrightTimeoutError:
             price_control = self.page.locator(self._PRICE_FILTER_CONTROL).first
@@ -169,19 +172,54 @@ class SearchResultsPage(BasePage):
                 return False
             price_control.click()
             try:
+                min_input.wait_for(state="visible", timeout=2_000)
                 max_input.wait_for(state="visible", timeout=2_000)
             except PlaywrightTimeoutError:
                 return False
 
-        max_input.fill(str(max_price))
-        apply_button = self.page.locator(self._APPLY_PRICE_BUTTON).first
-        if not apply_button.is_visible():
-            return False
+        max_price_text = format(max_price.normalize(), "f")
+        self._type_price_value(min_input, "0")
+        self._type_price_value(max_input, max_price_text)
+        if max_input.input_value() != max_price_text:
+            raise EbaySearchError("eBay did not retain the requested maximum-price input")
+
+        submit_button = self.page.locator(self._SUBMIT_PRICE_RANGE_XPATH)
+        try:
+            submit_button.wait_for(state="visible", timeout=2_000)
+        except PlaywrightTimeoutError as exc:
+            message = "eBay price inputs are visible but submit is unavailable"
+            raise EbaySearchError(message) from exc
 
         current_url = self.page.url
-        apply_button.click()
-        self._wait_for_results_change(current_url)
+        submit_button.click()
+        if not self._wait_for_results_change(current_url):
+            raise EbaySearchError("eBay price filter did not change the results page")
+        self._assert_max_price_in_url(max_price)
         return True
+
+    @staticmethod
+    def _type_price_value(price_input: Locator, value: str) -> None:
+        """Enter a price through keyboard events and commit it by leaving the field."""
+        price_input.click()
+        price_input.press("Control+A")
+        price_input.press("Backspace")
+        # eBay's controlled price inputs can discard values injected by fill().
+        price_input.press_sequentially(value, delay=50)
+        price_input.press("Tab")
+
+    def _assert_max_price_in_url(self, max_price: Decimal) -> None:
+        query_parameters = parse_qs(urlsplit(self.page.url).query)
+        applied_values = query_parameters.get("_udhi")
+        if not applied_values:
+            raise EbaySearchError("eBay did not apply the requested maximum-price filter")
+        try:
+            applied_max_price = Decimal(applied_values[0])
+        except InvalidOperation as exc:
+            raise EbaySearchError("eBay returned an invalid maximum-price filter value") from exc
+        if applied_max_price != max_price:
+            raise EbaySearchError(
+                f"eBay applied maximum price {applied_max_price} instead of {max_price}"
+            )
 
     def go_to_next_results_page(self) -> bool:
         """Advance one result page when eBay exposes an enabled Next link."""

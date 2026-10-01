@@ -14,6 +14,7 @@ REQUIRED_FIELDS = {
     "expected_page_count",
 }
 NEGATIVE_REQUIRED_FIELDS = {"id", "query", "max_price", "limit", "expected_message"}
+INVALID_CART_REQUIRED_FIELDS = {"id", "urls", "expected_message"}
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,13 @@ class InvalidSearchCase:
     query: str
     max_price: Decimal
     limit: int | Decimal | bool
+    expected_message: str
+
+
+@dataclass(frozen=True)
+class InvalidCartCase:
+    id: str
+    urls: tuple[str, ...]
     expected_message: str
 
 
@@ -123,6 +131,38 @@ def load_invalid_search_cases(path: Path) -> tuple[InvalidSearchCase, ...]:
             query=row["query"],
             max_price=max_price,
             limit=row["limit"],
+            expected_message=row["expected_message"],
+        )
+        cases.append(case)
+        seen_ids.add(case.id)
+    return tuple(cases)
+
+
+def load_invalid_cart_cases(path: Path) -> tuple[InvalidCartCase, ...]:
+    """Load invalid URL lists and their expected add-to-cart validation errors."""
+    rows = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("Invalid cart test data must be a non-empty JSON array")
+
+    cases = []
+    seen_ids = set()
+    for row in rows:
+        if not isinstance(row, dict) or set(row) != INVALID_CART_REQUIRED_FIELDS:
+            raise ValueError("Each invalid cart case needs id, urls and expected_message")
+        if not isinstance(row["id"], str) or not row["id"].strip():
+            raise ValueError("Invalid cart case id must be a non-empty string")
+        if row["id"] in seen_ids:
+            raise ValueError(f"Duplicate invalid cart case id: {row['id']}")
+        if not isinstance(row["urls"], list) or not all(
+            isinstance(url, str) for url in row["urls"]
+        ):
+            raise ValueError("Invalid cart case urls must be a list of strings")
+        if not isinstance(row["expected_message"], str) or not row["expected_message"].strip():
+            raise ValueError("Invalid cart case expected_message must be a non-empty string")
+
+        case = InvalidCartCase(
+            id=row["id"],
+            urls=tuple(row["urls"]),
             expected_message=row["expected_message"],
         )
         cases.append(case)

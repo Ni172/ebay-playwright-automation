@@ -6,37 +6,41 @@ from flows.shopping_flow import ShoppingFlow
 from pages.search_results_page import SearchResultsPage
 
 pytestmark = pytest.mark.e2e
-RESERVE_CANDIDATES = 3
 
 
 def test_searches_and_adds_every_eligible_item(page, cart_case, rng, screenshot):
     search_page = SearchResultsPage(page)
-    candidate_limit = cart_case.limit + RESERVE_CANDIDATES
 
     print(
-        f"Search {cart_case.query!r} for {cart_case.limit} required items "
-        f"and up to {RESERVE_CANDIDATES} reserve candidates "
-        f"at or under ILS {cart_case.max_price}"
+        f"Search {cart_case.query!r} for {cart_case.limit} items "
+        f"at or under ILS {cart_case.max_price}; add every returned URL"
     )
     urls = search_page.search_items_by_name_under_price(
         cart_case.query,
         cart_case.max_price,
-        candidate_limit,
+        cart_case.limit,
     )
-    assert len(urls) >= cart_case.limit, (
-        f"The live shopping scenario requires {cart_case.limit} candidates, "
-        f"but search returned {len(urls)}"
-    )
-    candidate_summary = f"Collected {len(urls)} candidate URLs;"
-    candidate_summary += f" add exactly {cart_case.limit} available products"
-    print(candidate_summary)
+    assert len(urls) == cart_case.limit
+    print(f"Collected {len(urls)} URLs; add every URL")
 
     shopping_flow = ShoppingFlow(page, rng, screenshot)
-    added_items = shopping_flow.add_items_to_cart(
-        urls,
-        expected_count=cart_case.limit,
-    )
+    added_items = shopping_flow.add_items_to_cart(urls)
 
-    assert len(added_items) == cart_case.limit
-    assert all(item.url in urls for item in added_items)
-    print(f"Confirmed all {len(added_items)} required cart additions")
+    assert [item.url for item in added_items] == urls
+    for item_number, item in enumerate(added_items, start=1):
+        variant_summary = ", ".join(f"{variant.name}={variant.value}" for variant in item.variants)
+        item_summary = f"Confirmed item {item_number}/{len(urls)}: {item.url};"
+        item_summary += f" variants={variant_summary or 'none'}"
+        print(item_summary)
+
+
+def test_add_items_to_cart_rejects_invalid_urls_before_navigation(
+    page, rng, screenshot, invalid_cart_case
+):
+    shopping_flow = ShoppingFlow(page, rng, screenshot)
+    initial_url = page.url
+
+    with pytest.raises(ValueError, match=invalid_cart_case.expected_message):
+        shopping_flow.add_items_to_cart(invalid_cart_case.urls)
+
+    assert page.url == initial_url

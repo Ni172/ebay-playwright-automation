@@ -9,7 +9,12 @@ from dotenv import load_dotenv
 from playwright.sync_api import BrowserContext, Page
 
 from config.settings import ROOT, Settings
-from utils.data_loader import SearchCase, load_invalid_search_cases, load_search_cases
+from utils.data_loader import (
+    SearchCase,
+    load_invalid_cart_cases,
+    load_invalid_search_cases,
+    load_search_cases,
+)
 from utils.evidence import attach_screenshot, finish_trace
 
 # Keep each test's outcomes until its context is ready for cleanup.
@@ -23,6 +28,10 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
         "--negative-case-file",
         default=str(ROOT / "data/search_negative_cases.json"),
+    )
+    parser.addoption(
+        "--invalid-cart-case-file",
+        default=str(ROOT / "data/cart_negative_cases.json"),
     )
 
 
@@ -47,6 +56,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         "search_case": ("--case-file", load_search_cases),
         "cart_case": ("--cart-case-file", load_search_cases),
         "negative_search_case": ("--negative-case-file", load_invalid_search_cases),
+        "invalid_cart_case": ("--invalid-cart-case-file", load_invalid_cart_cases),
     }
     fixture_name = next(
         (name for name in case_sources if name in metafunc.fixturenames),
@@ -81,12 +91,26 @@ def settings() -> Settings:
 
 
 @pytest.fixture(scope="session")
-def browser_context_args(browser_context_args: dict, settings: Settings) -> dict:
+def browser_type_launch_args(
+    browser_type_launch_args: dict,
+    browser_name: str,
+) -> dict:
+    launch_args = dict(browser_type_launch_args)
+    if browser_name == "chromium":
+        launch_args["args"] = [*launch_args.get("args", []), "--start-maximized"]
+    return launch_args
+
+
+@pytest.fixture(scope="session")
+def browser_context_args(
+    browser_context_args: dict,
+    settings: Settings,
+) -> dict:
     return {
         **browser_context_args,
         "base_url": browser_context_args.get("base_url") or settings.base_url,
         "locale": settings.locale,
-        "viewport": {"width": 1920, "height": 1080},
+        "no_viewport": True,
     }
 
 
