@@ -100,7 +100,8 @@ Keep `--capture=tee-sys`; do not use `-s`. Open a trace with
 ## Structure and submission
 
 [Architecture](docs/architecture.md) describes page objects, flow, helpers, and fixtures.
-[ReadMeAIBugs.md](ReadMeAIBugs.md) records the separate bug exercise's pending status.
+[ReadMeAIBugs.md](ReadMeAIBugs.md) contains three owner-supplied findings and proposed
+corrections, with the AI assistance disclosed.
 [AGENTS.md](AGENTS.md) contains project working rules.
 
 Submission repository: [Ni172/ebay-playwright-automation](https://github.com/Ni172/ebay-playwright-automation).

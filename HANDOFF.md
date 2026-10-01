@@ -67,10 +67,21 @@ The initial run retained 17 traces and nine screenshots; the search check retain
 traces and three screenshots. Separate Allure reports were generated in each matching
 `-report` directory. Non-fatal screenshot-readiness warnings did not suppress evidence.
 
+## Section 5: owner-supplied bug review
+
+The owner approved documenting three findings: fixture-managed resource lifecycle,
+condition-based waits instead of sleeps, and POM separation. Browser setup and closing
+are one finding. Sync API usage and the absence of a Page type import are not labeled bugs.
+`ReadMeAIBugs.md` includes original excerpts, explanations, and one illustrative correction.
+The example URL/selectors are unverified and the snippet was not executed. Only Markdown
+files changed; no tests or live-site actions were performed for this stage. The owner
+subsequently approved committing and pushing these documentation changes.
+
 ## Remaining work and limits
 
 - Complete a recognizable identification function as Guest behavior or Login Stub in an approved stage.
-- Resolve the bug exercise's unaided-review condition before completing `ReadMeAIBugs.md`.
+- `ReadMeAIBugs.md` now contains the owner's three agreed findings with AI-assisted
+  editing and corrections. It does not claim compliance with the unaided-review condition.
 - Live listings, availability, variants, delivery costs, and eBay errors remain external.
   Subtotal can exceed the budget even when every item passes the search price filter.
 - CAPTCHA solving/bypass is out of scope. A preliminary direct cart inspection encountered

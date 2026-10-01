@@ -66,6 +66,7 @@ with a stable hash of the test ID and is recorded in Allure. No persistent login
 
 ## Remaining scope
 
-Identification as an explicit Guest function and the bug-review exercise remain pending.
-The assignment's unaided bug-review condition must not be claimed for assisted work.
+Identification as an explicit Guest function remains pending. The bug review documents
+three owner-supplied findings with AI-assisted editing and proposed corrections; it does
+not claim to meet the assignment's unaided-review condition.
 See [HANDOFF.md](../HANDOFF.md) for current verification and limitations.
