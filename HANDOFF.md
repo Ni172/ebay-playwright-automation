@@ -90,6 +90,19 @@ subsequently approved committing and pushing these documentation changes.
 
 ## Commands
 
+The owner requested restoring complete newcomer setup instructions. README now includes
+Windows prerequisite installation (including Node.js/npm), cloning, virtual-environment
+setup, full/module/single-scenario commands, and Allure generation/opening and troubleshooting.
+Keep these operational instructions when shortening documentation.
+
+Verification: installed requirements successfully in a new Python 3.13.9 environment under
+`artifacts/readme-install-check`; pip check and all 17 collected cases passed there. The
+single pagination command selected one case. `npm ci` installed 156 packages from the lockfile.
+Allure generated `artifacts/readme-allure-check` from existing cart evidence and served it
+successfully on localhost:8766 (HTTP 200). Its summary retained three passes and one failure.
+Ruff passed in the project environment; all four documented winget package IDs resolved.
+No live eBay tests were rerun during this documentation update.
+
 Use the virtual environment and the commands in [README.md](README.md). Keep `EBAY_TRACE=on`
 for evidence and do not also enable plugin tracing. Use a separate `--alluredir` for each run.
 The installed Allure CLI can be invoked directly if npm/npx is absent from the current PATH:

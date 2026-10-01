@@ -1,108 +1,161 @@
 # eBay Playwright Automation
 
-Local Python E2E assignment using Playwright (sync), pytest, POM, JSON data, and Allure.
-Requirements: [original assignment](docs/assignment/automation-developer-assignment.docx).
+Local Python E2E tests for eBay: search by price, add five items, and verify the cart Subtotal.
+Stack: synchronous Playwright, pytest, Page Object Model (POM), JSON data, Decimal, and Allure 3.
 
-## Scope
+## 1. Install prerequisites (Windows / PowerShell)
 
-The suite contains 17 cases:
+Install the missing tools below. Skip a command if that tool is already installed.
+
+```powershell
+winget install --id Git.Git --exact --source winget
+winget install --id Python.Python.3.13 --exact --source winget
+winget install --id Google.Chrome --exact --source winget
+winget install --id OpenJS.NodeJS.LTS --exact --source winget --accept-package-agreements --accept-source-agreements
+```
+
+Node.js LTS includes **npm and npx**; do not install them separately. Node.js is used only
+for Allure reports; the tests remain Python. This Allure 3 setup does not require Java.
+If winget is unavailable, use the official installers for [Git](https://git-scm.com/downloads/win),
+[Python](https://www.python.org/downloads/windows/), [Chrome](https://www.google.com/chrome/),
+and [Node.js LTS](https://nodejs.org/en/download).
+
+Close and reopen PowerShell and your IDE after installation, then verify:
+
+```powershell
+git --version
+py -3.13 --version
+node --version
+npm.cmd --version
+```
+
+The `.cmd` suffix avoids PowerShell execution-policy errors from npm's script wrapper.
+It runs the same npm commands; changing the machine's execution policy is unnecessary.
+
+## 2. Clone and install project dependencies
+
+```powershell
+git clone https://github.com/Ni172/ebay-playwright-automation.git
+cd ebay-playwright-automation
+py -3.13 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip check
+npm.cmd ci --no-audit --no-fund
+```
+
+If you already have the repository, start in its root and skip cloning.
+All commands below run from that directory. They use the virtual environment directly,
+so activation is optional. Python dependencies are pinned in `requirements.txt`;
+`npm ci` installs the Allure version locked in `package-lock.json` into `node_modules`.
+No global Allure installation is needed. Keep both dependency files in the checkout.
+
+## 3. Check and run tests
+
+Check the installation without contacting eBay:
+
+```powershell
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m ruff format --check .
+.\.venv\Scripts\python.exe -m pytest --collect-only --browser-channel chrome -q --alluredir=artifacts/collection-check
+```
+
+Collection should list **17 cases**:
 
 | Coverage | Cases |
 | --- | ---: |
-| Search: five shoes under ILS 220, zero under ILS 0.01, 65 across two pages | 3 |
+| Search: five results under ILS 220, zero under ILS 0.01, 65 across two pages (60 + 5) | 3 |
 | Invalid search inputs rejected before navigation | 10 |
-| Search, add all five items, verify cart count and subtotal (4.2 + 4.3) | 1 |
+| Search, add all five items, verify cart count and Subtotal | 1 |
 | Invalid cart URL lists rejected before navigation | 3 |
 
-Section 4.3 extends the existing cart scenario. It compares the displayed **Subtotal**
-with `max_price * limit` using `Decimal`, and requires exactly five cart items.
-This includes shipping shown by eBay; no checkout-only amounts are estimated.
-A failed addition never reduces the expected count or budget.
-See [HANDOFF.md](HANDOFF.md) for verified results and remaining work.
-
-## Setup
-
-Prerequisites: Python 3.13, installed Google Chrome, and Node.js/npm for Allure reports.
-Run from the repository root in PowerShell:
+Run the full suite (adds five items to an isolated guest cart):
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-python -m pip check
-npm ci --no-audit --no-fund
+.\.venv\Scripts\python.exe -m pytest tests/e2e --run-e2e --browser-channel chrome -vv --log-cli-level=INFO
 ```
 
-If activation is blocked, use `.\.venv\Scripts\python.exe` instead of `python`.
-Python dependencies are pinned in `requirements.txt`; `pyproject.toml` configures pytest/Ruff.
-
-## Check and run
+Or run one module / scenario:
 
 ```powershell
-python -m ruff check .
-python -m ruff format --check .
-python -m pytest --collect-only --browser-channel chrome -q
+# Search module: 13 cases; no cart additions
+.\.venv\Scripts\python.exe -m pytest tests/e2e/test_search_submission.py --run-e2e --browser-channel chrome -vv
+# Cart module: one shopping scenario and three invalid-input cases
+.\.venv\Scripts\python.exe -m pytest tests/e2e/test_add_items_to_cart.py --run-e2e --browser-channel chrome -vv
+# Only the 65-result pagination scenario
+.\.venv\Scripts\python.exe -m pytest tests/e2e/test_search_submission.py -k shoes-pagination-under-220-ils --run-e2e --browser-channel chrome -vv
 ```
 
-Run live tests only when cart additions are intended:
+Without `--run-e2e`, tests are skipped. Chrome is visible and maximized; `--headed` is in
+`pyproject.toml`. Remove that flag there to run headlessly. To use bundled Chromium instead,
+run `.\.venv\Scripts\python.exe -m playwright install chromium`, then omit `--browser-channel chrome`.
+
+## 4. Generate and open Allure
+
+After a test run, including a failed run:
 
 ```powershell
-python -m pytest tests/e2e --run-e2e --browser-channel chrome -vv --log-cli-level=INFO
+npm.cmd run report
+npm.cmd run report:open
 ```
 
-For search only, replace `tests/e2e` with `tests/e2e/test_search_submission.py`.
-For the cart scenario and its input checks, use `tests/e2e/test_add_items_to_cart.py`.
-Without `--run-e2e`, pytest skips the suite. Tests run locally; there is no CI.
+Results are in `artifacts/allure-results`; the generated report is in `artifacts/allure-report`.
+Open the report through the command above, not by double-clicking `index.html`.
+Keep that terminal open while viewing; press **Ctrl+C** to stop the report server.
+`npm run report` replaces the generated default report. Each pytest run cleans its selected
+Allure results directory, so the default report describes the latest run, not all earlier runs.
 
-Chrome opens visibly and maximized because pytest's `addopts` includes `--headed`.
-Remove that flag to run headlessly. To use bundled Chromium, install it with
-`python -m playwright install chromium` and omit `--browser-channel chrome`.
-
-## Reports
+To preserve a separate run, use a new directory name each time:
 
 ```powershell
-npm run report
-npm run report:open
+.\.venv\Scripts\python.exe -m pytest tests/e2e --run-e2e --browser-channel chrome -vv --alluredir=artifacts/allure-my-run
+npx.cmd allure generate artifacts/allure-my-run --output artifacts/allure-my-run-report
+npx.cmd allure open artifacts/allure-my-run-report
 ```
 
-Default results: `artifacts/allure-results`; generated report: `artifacts/allure-report`.
-Each run cleans its selected results directory. Use `--alluredir=artifacts/<run-name>`
-to preserve earlier evidence, then generate a matching report:
+Allure includes logs, captured stdout, random seeds, screenshots, and trace attachments.
+Keep `--capture=tee-sys`; adding `-s` removes stdout from the report. To inspect the first
+trace from the default results directory:
 
 ```powershell
-npx allure generate artifacts/<run-name> --output artifacts/<run-name>-report
+$trace = Get-ChildItem artifacts/allure-results -Filter *.zip | Select-Object -First 1
+.\.venv\Scripts\python.exe -m playwright show-trace $trace.FullName
 ```
 
-If npx is unavailable on PATH, use `node node_modules/allure/cli.js` instead of `npx allure`.
+## Configuration and architecture
 
-Allure includes stdout, selected variants, random seeds, viewport screenshots, and traces.
-Keep `--capture=tee-sys`; do not use `-s`. Open a trace with
-`python -m playwright show-trace <trace-attachment.zip>`.
+Optional settings are listed in `.env.example`; copy it to `.env` only if you need overrides.
+Real environment variables take precedence. Defaults: ILS / en-IL, action timeout 10 seconds,
+navigation timeout 30 seconds, and `EBAY_TRACE=on`. Do not also enable plugin `--tracing`.
 
-## Configuration and assumptions
+| Location | Responsibility |
+| --- | --- |
+| `pages/` | Page locators and interactions, including XPath search-result extraction |
+| `flows/shopping_flow.py` | Visit each product, select available variants, confirm additions |
+| `tests/e2e/`, `utils/cart_assertions.py` | Scenario expectations and exact count / budget assertions |
+| `conftest.py`, `config/` | Browser fixtures, isolated contexts, configuration, reproducible seeds |
+| `data/`, `utils/` | External cases, data validation, Decimal parsing, evidence |
 
-- `.env.example` lists settings; real environment variables override `.env`.
-- Currency/locale: ILS / en-IL. Other currencies fail parsing explicitly.
-- Each test uses a fresh guest browser context; no saved account state or credentials.
-  A dedicated identification function remains pending.
-- JSON files under `data/` keep search and cart inputs separate. Override them with
-  `--case-file`, `--negative-case-file`, `--cart-case-file`, or `--invalid-cart-case-file`.
-- Variants are selected from available options with a recorded seed. The final displayed
-  subtotal determines the budget outcome, including price changes caused by variants.
-- Even when every item's price is under ILS 220, shipping can push Subtotal above ILS 1,100.
-  The test must then fail; it does not raise the budget or switch to the Items amount.
-- Required unavailable items fail; they are never replaced or silently skipped.
-- `EBAY_TRACE=on` retains traces. `off` disables them; `retain-on-failure` covers failures
-  known before context cleanup. Do not also enable Playwright's `--tracing`.
-- eBay errors and verification challenges can block a run. No CAPTCHA bypass is attempted.
-  Runtime evidence and authentication data stay out of Git.
+Search and cart data are separate. Override inputs with `--case-file`, `--negative-case-file`,
+`--cart-case-file`, or `--invalid-cart-case-file`. See [architecture](docs/architecture.md).
 
-## Structure and submission
+## Troubleshooting and current limits
 
-[Architecture](docs/architecture.md) describes page objects, flow, helpers, and fixtures.
-[ReadMeAIBugs.md](ReadMeAIBugs.md) contains three findings, explanations, and proposed corrections.
-[AGENTS.md](AGENTS.md) contains project working rules.
+- **npm/node not found:** reopen the terminal/IDE after Node.js installation. For a default
+  Windows install, check `& "C:\Program Files\nodejs\npm.cmd" --version` and ensure
+  `C:\Program Files\nodejs` is on PATH. If npx alone is unavailable, replace `npx.cmd allure`
+  with `node node_modules/allure/cli.js`.
+- **All tests skipped / empty report:** use `--run-e2e` for a live run; collection alone does
+  not produce test results. Generate the report from the same results directory used by pytest.
+- **Cart budget failure:** eBay's displayed Subtotal includes shipping. Five qualifying items
+  can still exceed ILS 1,100; this must fail the assertion. Items are never skipped to make it pass.
+- **eBay error / CAPTCHA / unavailable listing:** retain the evidence and inspect the failure.
+  External availability prevents a guaranteed green run; the project does not bypass CAPTCHA.
+- Every test uses a fresh guest context. An explicit identification function remains pending.
+  Credentials, session state, and generated evidence are excluded from Git. Execution is local only.
 
-Submission repository: [Ni172/ebay-playwright-automation](https://github.com/Ni172/ebay-playwright-automation).
-Final submission still requires the remaining assignment work, accessible run evidence,
-and verified reviewer access. Publication requires separate approval.
+Verified locally with Python 3.13.9, Node.js 24.19.0, npm 11.17.0, and the locked Allure 3.19.1.
+For actual live-run outcomes, see [HANDOFF.md](HANDOFF.md); the suite is not currently all green.
+
+[Assignment](docs/assignment/automation-developer-assignment.docx) ·
+[Bug review](ReadMeAIBugs.md) · [Working rules](AGENTS.md) ·
+[GitHub repository](https://github.com/Ni172/ebay-playwright-automation)
