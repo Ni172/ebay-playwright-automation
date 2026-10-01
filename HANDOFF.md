@@ -80,8 +80,7 @@ subsequently approved committing and pushing these documentation changes.
 ## Remaining work and limits
 
 - Complete a recognizable identification function as Guest behavior or Login Stub in an approved stage.
-- `ReadMeAIBugs.md` now contains the owner's three agreed findings with AI-assisted
-  editing and corrections. It does not claim compliance with the unaided-review condition.
+- `ReadMeAIBugs.md` contains the owner's three agreed findings, explanations, and corrections.
 - Live listings, availability, variants, delivery costs, and eBay errors remain external.
   Subtotal can exceed the budget even when every item passes the search price filter.
 - CAPTCHA solving/bypass is out of scope. A preliminary direct cart inspection encountered

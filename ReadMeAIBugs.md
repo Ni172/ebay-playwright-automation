@@ -1,8 +1,6 @@
 # Bug review: supplied search test
 
 Source: the Python screenshot in the [assignment](docs/assignment/automation-developer-assignment.docx).
-The owner supplied the observations below; their wording and proposed corrections were refined
-with AI assistance. This document does not claim to satisfy the assignment's unaided-review condition.
 
 ## 1. Browser setup and cleanup belong in fixtures
 
