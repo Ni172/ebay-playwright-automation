@@ -2,19 +2,23 @@
 
 Python end-to-end automation assignment for searching eBay products by price, adding eligible items to the cart, and verifying the cart amount. The planned implementation uses Playwright, pytest, Page Object Model (POM), and Allure.
 
+The original assignment is retained in [`docs/assignment/automation-developer-assignment.docx`](docs/assignment/automation-developer-assignment.docx).
+
 ## Current status
 
-Local infrastructure is implemented: isolated pytest browser fixtures, validated configuration and JSON data, Decimal price parsing, reproducible randomness, screenshots and traces attached to Allure, and local infrastructure checks. Search submission, the optional visible max-price filter, XPath extraction of eligible ILS-priced URLs, and pagination are implemented and locally verified. The price-filter and pagination locators remain unverified against a live eBay result page. Shopping scenarios are not implemented yet.
+The repository now exposes only real eBay E2E tests. Shared pytest fixtures still provide isolated browser contexts, validated JSON data, reproducible randomness, screenshots, traces, and Allure output. Search submission, optional max-price filtering, XPath result extraction, pagination, ProductPage, and ShoppingFlow are implemented. The latest full Google Chrome run passed all three scenarios and confirmed exactly five cart additions.
 
-Latest local validation is recorded in the current handoff. The live search-submission validation passed; the new live price-filter and pagination scenario still requires an owner-run validation. Shopping functionality is not yet validated.
+If eBay returns its known `Something went wrong on our end` page, shared navigation uses the visible `Go to homepage` control. Search resubmits the original query once. ShoppingFlow retries a product URL once, while a failure returning to search falls back to Home and continues without repeating the already confirmed Add to cart action. An error before cart confirmation also returns Home but fails without clicking Add to cart again. Repeated errors fail explicitly; recovery never loops or attempts to bypass a block.
 
-The latest live search-submission attempt on 2026-09-30 was blocked by eBay with HTTP 403 at the homepage. The Allure report retains the failure screenshot and trace. No retry intended to defeat the block and no bypass was attempted.
+Latest validation is recorded in the current handoff. eBay availability is external and can change between runs; a site error is recorded honestly instead of being bypassed.
+
+The live cart scenario requests five eligible products plus up to three reserve candidates. ShoppingFlow replaces only listings that eBay explicitly marks ended or unavailable, with a warning and screenshot. It still requires exactly five confirmed additions and fails if the reserve pool is exhausted; other product or cart errors are never skipped.
 
 ## Requirements
 
 - Use Python, Playwright, OOP, and POM. TypeScript signatures in the assignment are examples, not the implementation language.
 - Read test inputs from an external JSON file.
-- No authentication or credentials are required for the agreed scope.
+- Identification is still pending clarification as either a Guest flow or a Login Stub. Real credentials are not stored in the repository.
 - Search by query and maximum price. Apply the site's price filter when available.
 - Collect eligible product URLs using XPath, up to the requested limit (default 5).
 - Continue through pagination when necessary, stopping at the limit or when pages end. Returning fewer results, including zero, is valid.
@@ -74,17 +78,18 @@ Python dependencies, including indirect dependencies, are pinned in `requirement
 
 Reporting dependencies remain locked in `package-lock.json`. `npm ci` installs them locally into `node_modules`; it is not a CI pipeline. This workstation uses the system Node.js LTS installation and the standard `npm` command.
 
-Useful subsets and debugging:
+Live scenarios and debugging:
 
 ```powershell
-python -m pytest -m unit
-python -m pytest -m infra --headed
-python -m pytest --case-file data/search_cases.json
-python -m pytest tests/e2e/test_search_submission.py --run-e2e -vv
+python -m pytest tests/e2e --run-e2e --browser-channel chrome -vv
+python -m pytest tests/e2e/test_search_submission.py --run-e2e --browser-channel chrome -vv
+python -m pytest tests/e2e/test_add_items_to_cart.py --run-e2e --browser-channel chrome -vv
 python -m playwright show-trace artifacts/allure-results/<trace-attachment>.zip
 ```
 
 `search_case` parametrizes tests from validated JSON; `search_cases` returns the full dataset. `rng` provides a per-test generator with its seed recorded in Allure. `screenshot("checkpoint-name")` attaches evidence. `page` and `context` preserve the plugin's lifecycle and per-test isolation.
+
+Screenshots use a 1920x1080 browser viewport and capture the visible viewport rather than the entire scrollable page. Before capture, the evidence helper waits conditionally for the completed document, loaded fonts, and images intersecting the viewport; animations are disabled during capture. A bounded timeout prevents a stalled external asset from suppressing all evidence. Playwright traces retain the broader debugging context.
 
 Optional `.env` values appear in `.env.example`; actual environment variables take precedence. ILS/en-IL is the agreed configuration because eBay displayed Israeli shekels in the normal local browser context. Other currencies/locales fail explicitly until supported. `--base-url` overrides the environment base URL.
 
@@ -93,11 +98,18 @@ Browser visibility has one project-level control: `--headed` in `pyproject.toml`
 Remove only that flag from the same line to run headlessly. This controls browser
 visibility only and does not opt in to real eBay tests.
 
+Playwright calls the browser engine `chromium`. The current E2E commands use the installed
+Google Chrome binary by adding `--browser-channel chrome`, matching the owner's normal
+browser. Browser selection is independent of the known-error recovery implemented in
+`EbayErrorPage`.
+
 `EBAY_TRACE=on` retains all primary-context traces; `off` disables them; `retain-on-failure` retains setup/call failures known at context teardown. Use default `on` for teardown-only failures too. Do not combine this with `--tracing`. Additional contexts from `new_context` do not receive custom trace wrapping.
 
-Results go to `artifacts/allure-results`, and the report to `artifacts/allure-report`. Results are cleaned at the start of each run; archive evidence first if needed. Failure screenshots are best effort for an open `page` during setup/call failures. Allure's pytest log capture is enabled. The failure-pipeline check intentionally fails a child test in a temporary directory; its enclosing check must pass.
+Pytest uses `--capture=tee-sys`, so `print()` output remains visible in the terminal and is also attached to each Allure test as `stdout`. Do not add `-s`, because it disables stdout capture and removes those prints from the report.
 
-Real-site tests must use the `e2e` marker and require `--run-e2e`. The search tests submit one external JSON query; the price-search scenario then attempts eBay's visible max-price filter when present, collects XPath result cards, and follows an enabled Next link until it reaches the requested limit or the pages end. It always rechecks each displayed price locally. If eBay blocks access, the test fails explicitly with retained evidence; it does not attempt a bypass. Local infrastructure checks do not access eBay. There is no CI or GitHub Actions workflow.
+Results go to `artifacts/allure-results`, and the report to `artifacts/allure-report`. Results are cleaned at the start of each run; archive evidence first if needed. Failure screenshots are best effort for an open `page` during setup/call failures. Allure's pytest log capture is enabled.
+
+The repository now contains only real-site E2E tests. They use the `e2e` marker and require `--run-e2e`. The search tests submit one external JSON query; the price-search scenario then attempts eBay's visible max-price filter when present, collects XPath result cards, and follows an enabled Next link until it reaches the requested limit or the pages end. It always rechecks each displayed price locally. If eBay blocks access, the test stops explicitly with retained evidence; it does not attempt a bypass. There is no CI or GitHub Actions workflow.
 
 ## Decisions pending
 
@@ -120,4 +132,4 @@ The public repository is available at `https://github.com/Ni172/ebay-playwright-
 - [Architecture](docs/architecture.md)
 - [Bug-analysis preparation](ReadMeAIBugs.md)
 
-Source requirements: `C:\Users\ElieBook\Downloads\תרגיל למפתח אוטומציה PM.docx`. The document's assessment weights sum to 110%; this is recorded as an apparent inconsistency, not corrected by assumption.
+The unchanged source assignment is retained at [`docs/assignment/automation-developer-assignment.docx`](docs/assignment/automation-developer-assignment.docx). Its assessment weights sum to 110%; this is recorded as an apparent inconsistency, not corrected by assumption.

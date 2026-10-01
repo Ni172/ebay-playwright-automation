@@ -1,6 +1,6 @@
 # Architecture proposal
 
-Status: shared infrastructure, BasePage, search submission, max-price filtering, XPath result extraction, and pagination are implemented. The price-filter and pagination locators are verified only with local HTML; product, cart page objects and the shopping flow remain the next stages.
+Status: shared infrastructure, BasePage, search submission, max-price filtering, XPath result extraction, pagination, ProductPage, and the add-items shopping flow are implemented. Product variants and five cart additions passed one live Chrome-channel run. Cart-total verification remains the next assignment stage.
 
 ## Stack and scope
 
@@ -34,7 +34,7 @@ flowchart TD
 
 “Whiteboard” is interpreted as this architecture diagram. No application whiteboard feature is required by the supplied assignment.
 
-## Proposed implementation layout
+## Current implementation layout
 
 ```text
 ebay-playwright-automation/
@@ -45,24 +45,26 @@ ebay-playwright-automation/
 ├── docs/architecture.md
 ├── requirements.txt              # pinned Python dependencies for pip
 ├── pyproject.toml                 # pytest and Ruff configuration
-├── .gitignore                    # planned generated-output and secret exclusions
-├── .env.example                  # planned configuration names, no secrets
-├── conftest.py                    # planned fixtures and evidence hooks
-├── config/settings.py            # planned validated environment configuration
-├── data/search_cases.json        # planned query, price, limit and currency inputs
+├── .gitignore                    # generated-output and secret exclusions
+├── .env.example                  # configuration names, no secrets
+├── conftest.py                    # fixtures and evidence hooks
+├── config/settings.py            # validated environment configuration
+├── data/search_cases.json        # query, price, limit and currency inputs
 ├── pages/
 │   ├── base_page.py
+│   ├── ebay_error_page.py
+│   ├── product_page.py
 │   └── search_results_page.py
 ├── flows/shopping_flow.py
 ├── utils/
 │   ├── money.py
 │   └── data_loader.py
-└── tests/
-    ├── test_shopping_cart.py
-    └── test_money.py              # planned focused parsing checks
+└── tests/e2e/
+    ├── test_search_submission.py
+    └── test_add_items_to_cart.py
 ```
 
-The tree above is the business implementation target. Shared configuration, data loading, money parsing, evidence helpers, conftest fixtures, and dependency configuration now exist. BasePage provides only shared navigation and HTTP failure reporting. SearchResultsPage uses semantic locators for search controls and XPath to extract unique, loaded-card URLs at or below the ILS limit. Local HTML validates this behavior; eBay's live pagination locator is not yet verified. Product, cart and flow packages remain extension points. Runtime artifacts are excluded from commits.
+The tree above reflects the current business implementation. Shared configuration, data loading, money parsing, evidence helpers, conftest fixtures, and dependency configuration exist. BasePage provides shared navigation and explicit HTTP failure reporting. EbayErrorPage alone owns the locators and click used for eBay's known error screen; business pages only decide whether their current operation may recover or must fail. SearchResultsPage uses semantic locators for search controls and XPath to extract unique, loaded-card URLs at or below the ILS limit. ProductPage selects enabled native variants and eBay button-based listbox variants, then requires evidence that Add to cart succeeded. ShoppingFlow coordinates every requested URL, evidence, reserve replacements, and return to the search page. One five-item live Chrome-channel run passed. CartPage and cart-total verification are not implemented yet. Runtime artifacts are excluded from commits.
 
 ## Implemented fixture lifecycle
 
@@ -90,9 +92,11 @@ Python identifiers will use snake_case equivalents. The final structure must pre
 - Use XPath for result extraction as explicitly required. Elsewhere prefer meaningful role, label, or stable attribute locators after inspecting the actual site.
 - Use Playwright's condition-based waiting and retrying assertions instead of fixed sleeps.
 - Deduplicate URLs, detect repeated pagination pages, and stop at the requested limit or end of results.
+- Recover from eBay's known error page through its visible `Go to homepage` control. Search and product navigation retry once; a failed return to results continues from Home so a confirmed Add to cart action is never repeated. Repeated errors fail explicitly.
 - Parse amounts with `Decimal`, retaining currency information. Do not compare mixed currencies or blindly strip punctuation. Explicitly handle or reject ambiguous price ranges.
 - Choose only available variants. Record the random seed and selected values so a failure can be investigated. Recheck the resulting price before adding; the policy for an over-budget variant remains pending.
 - Confirm cart additions rather than assuming a click succeeded. A failed addition must not reduce the expected count silently and produce a passing test.
+- Keep a small reserve candidate pool for live-site listings that become ended or unavailable between search and product navigation. Record every replacement and still require the original expected item count; do not skip other failures.
 - Start from a controlled cart state. Do not remove a user's existing items without agreement.
 - Zero results are valid for the search function. Define an explicit E2E outcome so an empty search does not masquerade as a completed shopping scenario.
 - CAPTCHA solving, bypass, and retries aimed at defeating CAPTCHA are out of scope. Capture the blocker and report it honestly.
@@ -103,11 +107,11 @@ Allure is the primary report. Include scenario parameters, readable steps, selec
 
 Refactoring should follow an initial working vertical slice: move demonstrated duplication into shared helpers while preserving observable behavior. Focused parsing tests protect monetary correctness; a real E2E run validates the integration when the site permits it.
 
-The current live search-submission attempt received eBay HTTP 403 before the search controls appeared. This is reported as a blocked run with an Allure screenshot and trace; the project does not retry to defeat the block or attempt a bypass.
+The latest complete live Chrome run passed all three current scenarios. Because eBay availability is external, later runs may still return HTTP 403 or the site's known error page. Those outcomes must be retained as evidence and reported honestly; the project does not attempt to defeat a block or CAPTCHA.
 
-## Open decisions before shopping E2E work
+## Open decisions for the remaining assignment work
 
-No authentication is in scope. ILS/en-IL is agreed. Subtotal versus delivered total, variant-price policy, initial cart state, zero-result handling, and account/site interaction permissions must be resolved before shopping work. Credentials and saved authentication state stay outside Git.
+ILS/en-IL is agreed. The add-items flow rejects an empty URL list and does not clear an existing cart. Identification must still be defined as a Guest flow or Login Stub. Subtotal versus delivered total, variant-price policy after a selection changes the displayed price, and controlled cart state must be resolved before cart-total verification is implemented. Credentials and saved authentication state stay outside Git.
 
 ## Documentation references
 

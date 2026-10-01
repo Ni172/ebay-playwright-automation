@@ -1,10 +1,8 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-ra --strict-markers --alluredir=artifacts/allure-results --clean-alluredir --headed"
+addopts = "-ra --strict-markers --alluredir=artifacts/allure-results --clean-alluredir --headed --capture=tee-sys"
 markers = [
-  "unit: local infrastructure validation without a browser",
-  "infra: browser infrastructure validation using local HTML only",
   "e2e: real eBay scenarios (requires --run-e2e)",
 ]
 log_level = "INFO"

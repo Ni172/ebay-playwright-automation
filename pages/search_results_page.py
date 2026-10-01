@@ -1,5 +1,6 @@
 """Search-page interactions and result-card locators for eBay."""
 
+import logging
 from decimal import Decimal
 from urllib.parse import urljoin
 
@@ -8,6 +9,12 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from pages.base_page import BasePage
 from utils.money import parse_price
+
+LOGGER = logging.getLogger(__name__)
+
+
+class EbaySearchError(RuntimeError):
+    """Raised when eBay returns its error page after the bounded recovery attempt."""
 
 
 class SearchResultsPage(BasePage):
@@ -43,19 +50,45 @@ class SearchResultsPage(BasePage):
         return response
 
     def search(self, query: str) -> None:
-        """Submit one non-empty search query and wait for the eBay results title."""
+        """Submit a query, recovering once through eBay's Go to homepage control."""
         if not query.strip():
             raise ValueError("Search query must not be empty")
 
+        self._submit_search(query)
+        if self._wait_for_search_outcome(query) == "results":
+            return
+
+        if not self.error_page.go_to_home_if_displayed():
+            raise EbaySearchError("eBay displayed an unrecognized search error page")
+
+        LOGGER.warning("eBay returned its error page; retrying the search once from the homepage")
+        self._submit_search(query)
+        if self._wait_for_search_outcome(query) != "results":
+            raise EbaySearchError("eBay returned its search error page again after recovery")
+
+    def _submit_search(self, query: str) -> None:
         self.confirm_shipping_destination_if_present()
         self.search_input.fill(query)
         self.confirm_shipping_destination_if_present()
         self.search_input.press("Enter")
-        self.page.wait_for_function(
-            "query => document.title.toLowerCase().includes(query) "
-            "&& document.title.includes('eBay')",
-            arg=query.casefold(),
+
+    def _wait_for_search_outcome(self, query: str) -> str:
+        outcome = self.page.wait_for_function(
+            """
+            ({ query, errorText }) => {
+                const title = document.title;
+                if (title.toLowerCase().includes(query) && title.includes('eBay')) {
+                    return 'results';
+                }
+                if ((document.body?.innerText || '').includes(errorText)) {
+                    return 'error';
+                }
+                return false;
+            }
+            """,
+            arg={"query": query.casefold(), "errorText": self.error_page.MESSAGE},
         )
+        return outcome.json_value()
 
     def confirm_shipping_destination_if_present(self, wait_timeout_ms: int = 0) -> bool:
         """Confirm eBay's already displayed shipping destination when its dialog is open."""

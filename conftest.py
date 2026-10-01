@@ -71,6 +71,7 @@ def browser_context_args(browser_context_args: dict, settings: Settings) -> dict
         **browser_context_args,
         "base_url": browser_context_args.get("base_url") or settings.base_url,
         "locale": settings.locale,
+        "viewport": {"width": 1920, "height": 1080},
     }
 
 

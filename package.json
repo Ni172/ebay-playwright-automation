@@ -3,6 +3,7 @@
   "private": true,
   "description": "Allure report generation only; test implementation is Python",
   "scripts": {
+    "clean:generated": "node -e \"const fs=require('fs'); for(const path of ['artifacts','tests/e2e/__pycache__']) fs.rmSync(path,{recursive:true,force:true})\"",
     "report": "node -e \"require('fs').rmSync('artifacts/allure-report', { recursive: true, force: true })\" && allure generate artifacts/allure-results --output artifacts/allure-report",
     "report:open": "allure open artifacts/allure-report"
   },
