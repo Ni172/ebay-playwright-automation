@@ -2,6 +2,9 @@
 
 ## Collaboration
 
+- Treat `docs/assignment/automation-developer-assignment.docx` as the primary requirements source. Before writing or changing code or tests in any approved stage, read the complete assignment and then reread the relevant section. Do not begin implementation until the requested work has been checked against the assignment.
+- The assignment is an end-to-end testing exercise. Add only real E2E tests by default. Do not add unit, component, mocked, simulated, or local deterministic tests unless the owner explicitly approves that test layer.
+- Implement the assignment scope as written. Do not increase the number of scenarios, add extra test categories, or broaden coverage beyond the approved stage unless the owner explicitly asks for that expansion.
 - The owner wants incremental work with explicit approval for each next stage. Complete the scope already approved without repeatedly asking for the same permission.
 - Complete only the stage approved by the owner. Live eBay mutations and GitHub publication require explicit approval.
 - Communicate with the owner in Hebrew. Keep source identifiers and repository documentation in clear English unless asked otherwise.

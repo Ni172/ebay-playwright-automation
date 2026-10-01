@@ -49,7 +49,9 @@ ebay-playwright-automation/
 ├── .env.example                  # configuration names, no secrets
 ├── conftest.py                    # fixtures and evidence hooks
 ├── config/settings.py            # validated environment configuration
-├── data/search_cases.json        # query, price, limit and currency inputs
+├── data/search_cases.json        # search-only scenarios and result expectations
+├── data/search_negative_cases.json # invalid search inputs and expected errors
+├── data/cart_cases.json          # isolated input for the cart mutation scenario
 ├── pages/
 │   ├── base_page.py
 │   ├── ebay_error_page.py
@@ -91,7 +93,7 @@ Python identifiers will use snake_case equivalents. The final structure must pre
 
 - Use XPath for result extraction as explicitly required. Elsewhere prefer meaningful role, label, or stable attribute locators after inspecting the actual site.
 - Use Playwright's condition-based waiting and retrying assertions instead of fixed sleeps.
-- Deduplicate URLs, detect repeated pagination pages, and stop at the requested limit or end of results.
+- Deduplicate URLs, record visited result pages, detect repeated pagination pages, and stop at the requested limit or end of results.
 - Recover from eBay's known error page through its visible `Go to homepage` control. Search and product navigation retry once; a failed return to results continues from Home so a confirmed Add to cart action is never repeated. Repeated errors fail explicitly.
 - Parse amounts with `Decimal`, retaining currency information. Do not compare mixed currencies or blindly strip punctuation. Explicitly handle or reject ambiguous price ranges.
 - Choose only available variants. Record the random seed and selected values so a failure can be investigated. Recheck the resulting price before adding; the policy for an over-budget variant remains pending.
@@ -107,7 +109,7 @@ Allure is the primary report. Include scenario parameters, readable steps, selec
 
 Refactoring should follow an initial working vertical slice: move demonstrated duplication into shared helpers while preserving observable behavior. Focused parsing tests protect monetary correctness; a real E2E run validates the integration when the site permits it.
 
-The latest complete live Chrome run passed all three current scenarios. Because eBay availability is external, later runs may still return HTTP 403 or the site's known error page. Those outcomes must be retained as evidence and reported honestly; the project does not attempt to defeat a block or CAPTCHA.
+The latest complete live Chrome run passed the three scenarios that existed before the expanded search matrix. Static checks and collection cover the new cases, but the fewer-than-five, high-price, pagination, and negative-request cases have not yet received an approved live run. Because eBay availability is external, later runs may still return HTTP 403 or the site's known error page. Those outcomes must be retained as evidence and reported honestly; the project does not attempt to defeat a block or CAPTCHA.
 
 ## Open decisions for the remaining assignment work
 

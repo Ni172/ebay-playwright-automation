@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from playwright.sync_api import BrowserContext, Page
 
 from config.settings import ROOT, Settings
-from utils.data_loader import SearchCase, load_search_cases
+from utils.data_loader import SearchCase, load_invalid_search_cases, load_search_cases
 from utils.evidence import attach_screenshot, finish_trace
 
 # Keep each test's outcomes until its context is ready for cleanup.
@@ -19,6 +19,11 @@ REPORTS = pytest.StashKey[dict[str, pytest.TestReport]]()
 def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption("--run-e2e", action="store_true", help="Opt in to real-site tests")
     parser.addoption("--case-file", default=str(ROOT / "data/search_cases.json"))
+    parser.addoption("--cart-case-file", default=str(ROOT / "data/cart_cases.json"))
+    parser.addoption(
+        "--negative-case-file",
+        default=str(ROOT / "data/search_negative_cases.json"),
+    )
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -38,13 +43,23 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
-    if "search_case" not in metafunc.fixturenames:
+    case_sources = {
+        "search_case": ("--case-file", load_search_cases),
+        "cart_case": ("--cart-case-file", load_search_cases),
+        "negative_search_case": ("--negative-case-file", load_invalid_search_cases),
+    }
+    fixture_name = next(
+        (name for name in case_sources if name in metafunc.fixturenames),
+        None,
+    )
+    if fixture_name is None:
         return
 
-    case_file = Path(metafunc.config.getoption("--case-file"))
-    cases = load_search_cases(case_file)
+    option_name, loader = case_sources[fixture_name]
+    case_file = Path(metafunc.config.getoption(option_name))
+    cases = loader(case_file)
     case_ids = [case.id for case in cases]
-    metafunc.parametrize("search_case", cases, ids=case_ids)
+    metafunc.parametrize(fixture_name, cases, ids=case_ids)
 
 
 @pytest.hookimpl(hookwrapper=True)

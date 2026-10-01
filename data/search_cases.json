@@ -1,3 +1,32 @@
 [
-  {"id": "shoes-under-220-ils", "query": "shoes", "max_price": "220.00", "limit": 5, "currency": "ILS"}
+  {
+    "id": "shoes-under-220-ils",
+    "query": "shoes",
+    "max_price": "220.00",
+    "limit": 5,
+    "currency": "ILS",
+    "expected_min_results": 5,
+    "expected_max_results": 5,
+    "expected_page_count": 1
+  },
+  {
+    "id": "womens-tshirts-under-001-ils",
+    "query": "womens t-shirts",
+    "max_price": "0.01",
+    "limit": 5,
+    "currency": "ILS",
+    "expected_min_results": 0,
+    "expected_max_results": 4,
+    "expected_page_count": 1
+  },
+  {
+    "id": "tshirts-pagination-under-2000-ils",
+    "query": "t-shirts",
+    "max_price": "2000.00",
+    "limit": 121,
+    "currency": "ILS",
+    "expected_min_results": 121,
+    "expected_max_results": 121,
+    "expected_page_count": 3
+  }
 ]

@@ -4,7 +4,7 @@ import logging
 from decimal import Decimal
 from urllib.parse import urljoin
 
-from playwright.sync_api import Locator, Response
+from playwright.sync_api import Locator, Page, Response
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from pages.base_page import BasePage
@@ -33,6 +33,11 @@ class SearchResultsPage(BasePage):
         "xpath=//a[contains(@class, 'pagination__next') and @href and not(@aria-disabled='true')]"
     )
 
+    def __init__(self, page: Page) -> None:
+        super().__init__(page)
+        self._last_visited_results_pages: tuple[str, ...] = ()
+        self._last_eligible_counts_by_page: tuple[int, ...] = ()
+
     @property
     def search_input(self) -> Locator:
         """Return the global search field from the current page."""
@@ -51,8 +56,7 @@ class SearchResultsPage(BasePage):
 
     def search(self, query: str) -> None:
         """Submit a query, recovering once through eBay's Go to homepage control."""
-        if not query.strip():
-            raise ValueError("Search query must not be empty")
+        self._validate_query(query)
 
         self._submit_search(query)
         if self._wait_for_search_outcome(query) == "results":
@@ -117,22 +121,42 @@ class SearchResultsPage(BasePage):
         The page filter is optional because eBay can vary its result-page layout.  The
         card-level price check remains the final decision for every returned URL.
         """
+        self._validate_query(query)
         self._validate_limits(max_price, limit)
+        self._last_visited_results_pages = ()
+        self._last_eligible_counts_by_page = ()
         self.open_search_home()
         self.search(query)
         self.apply_max_price_filter(max_price)
 
         eligible_urls: list[str] = []
         seen_urls: set[str] = set()
-        visited_pages: set[str] = set()
+        visited_pages: list[str] = []
+        eligible_counts_by_page: list[int] = []
+        seen_pages: set[str] = set()
 
-        while self.page.url not in visited_pages and len(eligible_urls) < limit:
-            visited_pages.add(self.page.url)
+        while self.page.url not in seen_pages and len(eligible_urls) < limit:
+            visited_pages.append(self.page.url)
+            seen_pages.add(self.page.url)
+            self._last_visited_results_pages = tuple(visited_pages)
+            count_before_page = len(eligible_urls)
             self._append_eligible_urls(eligible_urls, seen_urls, max_price, limit)
+            eligible_counts_by_page.append(len(eligible_urls) - count_before_page)
+            self._last_eligible_counts_by_page = tuple(eligible_counts_by_page)
             if len(eligible_urls) == limit or not self.go_to_next_results_page():
                 break
 
         return eligible_urls
+
+    @property
+    def last_visited_results_pages(self) -> tuple[str, ...]:
+        """Return the ordered result pages observed during the latest search."""
+        return self._last_visited_results_pages
+
+    @property
+    def last_eligible_counts_by_page(self) -> tuple[int, ...]:
+        """Return how many unique eligible URLs each visited page contributed."""
+        return self._last_eligible_counts_by_page
 
     def apply_max_price_filter(self, max_price: Decimal) -> bool:
         """Use the visible eBay max-price control when the current layout offers it."""
@@ -216,10 +240,15 @@ class SearchResultsPage(BasePage):
 
     @staticmethod
     def _validate_limits(max_price: Decimal, limit: int) -> None:
-        if not max_price.is_finite() or max_price <= 0:
+        if not isinstance(max_price, Decimal) or not max_price.is_finite() or max_price <= 0:
             raise ValueError("max_price must be finite and positive")
-        if limit <= 0:
-            raise ValueError("limit must be positive")
+        if type(limit) is not int or limit <= 0:
+            raise ValueError("limit must be a positive integer")
+
+    @staticmethod
+    def _validate_query(query: str) -> None:
+        if not isinstance(query, str) or not query.strip():
+            raise ValueError("Search query must not be empty")
 
     def _wait_for_results_change(self, previous_url: str) -> bool:
         try:

@@ -4,11 +4,15 @@ Updated: 2026-10-01 (Asia/Jerusalem).
 
 ## Current scope
 
-The repository contains three real eBay E2E scenarios in two files:
+The repository contains an expanded search matrix and one isolated cart scenario in two E2E test files:
 
-- search submission;
-- search by name and maximum price;
+- clothing searches using `shoes`, `womens t-shirts`, and `t-shirts`, with maximum prices at ILS 0.01, ILS 220, and ILS 2000;
+- a valid search outcome containing fewer than five URLs;
+- a 121-result search that must visit exactly three distinct result pages and records each page's URL and contribution;
+- ten invalid-request cases that must fail before navigation;
 - search, random available variant selection, and exactly five confirmed cart additions.
+
+The owner clarified that this assignment must remain E2E-only. Before every code or test change, read the complete assignment and its relevant section. Do not introduce unit, component, mocked, simulated, or deterministic-local tests, and do not expand scenario counts beyond the specifically approved scope.
 
 The project uses Python, Playwright synchronous API, pytest, POM, external JSON data, Decimal money values, reproducible randomness, and Allure. Execution is local through Google Chrome for real eBay scenarios. Publication of the current working tree is approved and pending final verification, commit, and push.
 
@@ -19,8 +23,23 @@ The project uses Python, Playwright synchronous API, pytest, POM, external JSON 
 - ShoppingFlow coordinates product navigation, cart confirmation, screenshots, reserve candidates for explicitly unavailable listings, and the exact required item count.
 - EbayErrorPage separately recognizes `Something went wrong on our end` and clicks the exact `Go to homepage` link or button. Search recovery is bounded to one retry.
 - Every pytest browser context is isolated. Evidence fixtures attach screenshots and traces to Allure.
+- Search and cart datasets are separate. Expanding search coverage does not create additional cart mutations.
+- All positive and negative search inputs are external JSON data. Negative cases include their expected validation message and use a dedicated loader without converting them into valid business cases.
+- The former standalone search-submission test was removed as redundant. Its URL-query and visible-input assertions now run in every external search case.
+- SearchResultsPage records the ordered result pages from its latest search so the pagination scenario can assert that more than one page was actually visited.
+- SearchResultsPage also records how many unique eligible URLs each visited page contributed, so pagination evidence is measurable rather than inferred only from the final count.
 
-## Current E2E evidence
+## Verification after the search-test expansion
+
+The reduced E2E suite collects 14 cases: three external search scenarios, ten externally supplied negative request-validation cases in the search module, and one cart scenario. The redundant five-result ILS 2000 case was removed because the pagination scenario already covers that price ceiling. `pip check`, Ruff lint, Ruff formatting, diff validation, and full collection pass after this adjustment.
+
+The owner then ran the search module alone through installed Google Chrome. Thirteen of its fourteen cases passed. `womens-tshirts-under-001-ils` was reported as broken because eBay returned its recognized `Something went wrong on our end` page for the initial `women's t-shirts` submission and again after the single bounded recovery attempt. The failure occurred before applying the ILS 0.01 filter or asserting the result count. Its screenshot, stdout, log, and trace were retained. The later 65-result pagination case passed, and all ten validation cases passed without navigating to eBay, so parameter count is not the demonstrated cause of this failure.
+
+The apostrophe was removed from the failing query. At the owner's explicit request for visible three-page pagination evidence, the pagination target was changed to 121 and its expectation to exactly three distinct result pages. The test prints every visited page URL and the number of eligible unique URLs contributed by that page.
+
+The isolated pagination case was then run through installed Google Chrome and passed in 76.92 seconds. It collected 121 unique eligible URLs across exactly three distinct pages: 60 from page 1, 60 from `_pgn=2`, and 1 from `_pgn=3`. Its result, final-page screenshot, stdout, and Playwright trace are retained separately in `artifacts/allure-pagination-check`, so the preceding search-module evidence was not deleted. The adjusted fewer-than-five query has not yet been rerun.
+
+## Earlier E2E evidence
 
 On 2026-10-01, the final cleaned E2E suite ran through installed Google Chrome. It collected exactly three tests and all three passed in 153.91 seconds. The shopping scenario collected eight eligible `shoes` candidates at or below ILS 220 and confirmed exactly five cart additions. The reproducible selection included `US Shoes Size=Men 10.5`. Known eBay error pages encountered while returning to search recovered through Home without repeating confirmed additions. A preceding run had two passes and one external eBay search-error failure; its results were replaced by the final clean run rather than mixed into the report.
 

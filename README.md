@@ -6,7 +6,7 @@ The original assignment is retained in [`docs/assignment/automation-developer-as
 
 ## Current status
 
-The repository now exposes only real eBay E2E tests. Shared pytest fixtures still provide isolated browser contexts, validated JSON data, reproducible randomness, screenshots, traces, and Allure output. Search submission, optional max-price filtering, XPath result extraction, pagination, ProductPage, and ShoppingFlow are implemented. The latest full Google Chrome run passed all three scenarios and confirmed exactly five cart additions.
+The repository exposes real eBay E2E scenarios plus request-validation cases that fail before navigation. Shared pytest fixtures provide isolated browser contexts, validated JSON data, reproducible randomness, screenshots, traces, and Allure output. Search submission, optional max-price filtering, XPath result extraction, pagination, ProductPage, and ShoppingFlow are implemented. The latest completed full Google Chrome run predates the expanded search matrix; it passed the earlier three scenarios and confirmed exactly five cart additions.
 
 If eBay returns its known `Something went wrong on our end` page, shared navigation uses the visible `Go to homepage` control. Search resubmits the original query once. ShoppingFlow retries a product URL once, while a failure returning to search falls back to Home and continues without repeating the already confirmed Add to cart action. An error before cart confirmation also returns Home but fails without clicking Add to cart again. Repeated errors fail explicitly; recovery never loops or attempts to bypass a block.
 
@@ -87,7 +87,7 @@ python -m pytest tests/e2e/test_add_items_to_cart.py --run-e2e --browser-channel
 python -m playwright show-trace artifacts/allure-results/<trace-attachment>.zip
 ```
 
-`search_case` parametrizes tests from validated JSON; `search_cases` returns the full dataset. `rng` provides a per-test generator with its seed recorded in Allure. `screenshot("checkpoint-name")` attaches evidence. `page` and `context` preserve the plugin's lifecycle and per-test isolation.
+`search_case` parametrizes valid search coverage from `data/search_cases.json`. `negative_search_case` reads invalid inputs and expected errors from `data/search_negative_cases.json`. `cart_case` independently reads `data/cart_cases.json`, so additional search cases do not add more products to the live cart scenario. `search_cases` returns the full valid search dataset. `rng` provides a per-test generator with its seed recorded in Allure. `screenshot("checkpoint-name")` attaches evidence. `page` and `context` preserve the plugin's lifecycle and per-test isolation. Override the datasets with `--case-file`, `--negative-case-file`, and `--cart-case-file` respectively.
 
 Screenshots use a 1920x1080 browser viewport and capture the visible viewport rather than the entire scrollable page. Before capture, the evidence helper waits conditionally for the completed document, loaded fonts, and images intersecting the viewport; animations are disabled during capture. A bounded timeout prevents a stalled external asset from suppressing all evidence. Playwright traces retain the broader debugging context.
 
@@ -109,7 +109,7 @@ Pytest uses `--capture=tee-sys`, so `print()` output remains visible in the term
 
 Results go to `artifacts/allure-results`, and the report to `artifacts/allure-report`. Results are cleaned at the start of each run; archive evidence first if needed. Failure screenshots are best effort for an open `page` during setup/call failures. Allure's pytest log capture is enabled.
 
-The repository now contains only real-site E2E tests. They use the `e2e` marker and require `--run-e2e`. The search tests submit one external JSON query; the price-search scenario then attempts eBay's visible max-price filter when present, collects XPath result cards, and follows an enabled Next link until it reaches the requested limit or the pages end. It always rechecks each displayed price locally. If eBay blocks access, the test stops explicitly with retained evidence; it does not attempt a bypass. There is no CI or GitHub Actions workflow.
+The suite uses the `e2e` marker and requires `--run-e2e`. The external search matrix covers `shoes` at ILS 220, `womens t-shirts` with a valid result containing fewer than five URLs, and a 121-result `t-shirts` case that must visit exactly three distinct result pages. The pagination case records and prints each page URL and the number of unique eligible URLs it contributed, proving that the earlier pages did not satisfy the requested limit before `Next` was used. Search attempts eBay's visible max-price filter when present, collects XPath result cards, follows an enabled Next link until it reaches the requested limit or the pages end, and rechecks every displayed price locally. Externally supplied negative cases in the same E2E module reject blank queries, invalid prices, and invalid limits before navigation. If eBay blocks access, a live scenario stops explicitly with retained evidence; it does not attempt a bypass. There is no CI or GitHub Actions workflow.
 
 ## Decisions pending
 
@@ -117,7 +117,7 @@ The repository now contains only real-site E2E tests. They use the `e2e` marker 
 - Whether the asserted amount is the items subtotal or a total including delivery and taxes.
 - Behavior when a selected variant changes the eligible price or a product cannot be added.
 - Empty-cart setup and cleanup, including permission before modifying an existing account cart.
-- The zero-result E2E outcome: a valid search result must not silently count as proof of successful add-to-cart behavior.
+- The live stability of the new fewer-than-five and forced-pagination search cases must be confirmed against eBay before their thresholds are treated as final evidence.
 
 ## GitHub submission
 
