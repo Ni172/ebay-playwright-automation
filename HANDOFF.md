@@ -2,6 +2,29 @@
 
 Updated: 2026-10-01 (Asia/Jerusalem).
 
+## Home-recovery hardening and positive execution (2026-10-02)
+
+Completed: added two full-search attempts through `SearchResultsPage._SEARCH_ATTEMPTS`. When the
+known eBay error page appears during search submission, price filtering, or pagination, the test
+clicks **Go to homepage** and restarts the complete search/filter/collection sequence once.
+Exhausting the attempts fails with evidence and never treats an error as zero results.
+
+Verified: Ruff lint/format and collection of all 17 E2E cases passed after this change. A live run
+of the four positive scenarios immediately before the change produced 3 passes and 1 expected
+budget failure: the cart had all five requested items, but its ILS 1,711.50 Subtotal exceeded the
+ILS 1,100.00 threshold. The corresponding report is in
+`artifacts/allure-positive-20261002-report`.
+
+The earlier live check established that eBay can return the known error page during pagination. The
+full-search loop above has not yet been run against that condition. No mocked or simulated test was
+added, per project policy.
+
+## Results-page URL wait (2026-10-02)
+
+Completed: results-page transitions after a price filter or pagination wait up to 30 seconds for
+the URL to change, replacing the former five-second limit. The page then waits for
+`domcontentloaded`; eBay's ongoing background requests make `networkidle` unsuitable here.
+
 ## Documentation and E2E default update (2026-10-02)
 
 Completed: removed the `--run-e2e` pytest option and its collection-time skip behavior.

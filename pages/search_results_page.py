@@ -33,6 +33,8 @@ class SearchResultsPage(BasePage):
     _NEXT_PAGE_XPATH = (
         "xpath=//a[contains(@class, 'pagination__next') and @href and not(@aria-disabled='true')]"
     )
+    _SEARCH_ATTEMPTS = 2
+    _RESULTS_CHANGE_TIMEOUT_MS = 30_000
 
     def __init__(self, page: Page) -> None:
         super().__init__(page)
@@ -56,20 +58,13 @@ class SearchResultsPage(BasePage):
         return response
 
     def search(self, query: str) -> None:
-        """Submit a query, recovering once through eBay's Go to homepage control."""
+        """Submit a query and wait until eBay shows results or its known error page."""
         self._validate_query(query)
 
         self._submit_search(query)
         if self._wait_for_search_outcome(query) == "results":
             return
-
-        if not self.error_page.go_to_home_if_displayed():
-            raise EbaySearchError("eBay displayed an unrecognized search error page")
-
-        LOGGER.warning("eBay returned its error page; retrying the search once from the homepage")
-        self._submit_search(query)
-        if self._wait_for_search_outcome(query) != "results":
-            raise EbaySearchError("eBay returned its search error page again after recovery")
+        raise EbaySearchError("eBay returned its error page after search submission")
 
     def _submit_search(self, query: str) -> None:
         self.confirm_shipping_destination_if_present()
@@ -126,10 +121,29 @@ class SearchResultsPage(BasePage):
         self._validate_limits(max_price, limit)
         self._last_visited_results_pages = ()
         self._last_eligible_counts_by_page = ()
-        self.open_search_home()
-        self.search(query)
-        self.apply_max_price_filter(max_price)
+        for attempt in range(self._SEARCH_ATTEMPTS):
+            try:
+                self.open_search_home()
+                self.search(query)
+                self.apply_max_price_filter(max_price)
+                return self._collect_eligible_urls_across_pages(max_price, limit)
+            except EbaySearchError as exc:
+                if not self.error_page.go_to_home_if_displayed():
+                    raise
+                if attempt + 1 == self._SEARCH_ATTEMPTS:
+                    raise EbaySearchError(
+                        "eBay returned its error page after the configured full-search retries"
+                    ) from exc
+                LOGGER.warning(
+                    "eBay returned its error page; restarting the full search (%d/%d)",
+                    attempt + 2,
+                    self._SEARCH_ATTEMPTS,
+                )
 
+        raise AssertionError("The configured full-search retry loop should always return or raise")
+
+    def _collect_eligible_urls_across_pages(self, max_price: Decimal, limit: int) -> list[str]:
+        """Collect eligible URLs through pagination after a successful filtered search."""
         eligible_urls: list[str] = []
         seen_urls: set[str] = set()
         visited_pages: list[str] = []
@@ -290,7 +304,10 @@ class SearchResultsPage(BasePage):
 
     def _wait_for_results_change(self, previous_url: str) -> bool:
         try:
-            self.page.wait_for_url(lambda url: url != previous_url, timeout=5_000)
+            self.page.wait_for_url(
+                lambda url: url != previous_url,
+                timeout=self._RESULTS_CHANGE_TIMEOUT_MS,
+            )
             self.page.wait_for_load_state("domcontentloaded")
         except PlaywrightTimeoutError:
             return False
