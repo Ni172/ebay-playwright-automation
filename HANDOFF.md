@@ -1,6 +1,16 @@
 # Project handoff
 
-Updated: 2026-10-01 (Asia/Jerusalem).
+Updated: 2026-10-02 (Asia/Jerusalem).
+
+## Agent coding-guidance update (2026-10-02)
+
+Completed: refined `AGENTS.md` with concise defensive-coding rules for module-level imports,
+narrow exception handling, accurate errors, missing-value validation, dead-code removal, safe
+pytest control flow, and meaningful constants. Comments should remain beside the relevant logic
+inside functions or methods and normally use no more than one or two precise lines.
+
+No product code, tests, scenarios, or live eBay behavior changed. No test execution was needed for
+this documentation-only update.
 
 ## Home-recovery hardening and positive execution (2026-10-02)
 
