@@ -21,7 +21,6 @@ REPORTS = pytest.StashKey[dict[str, pytest.TestReport]]()
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
-    parser.addoption("--run-e2e", action="store_true", help="Opt in to real-site tests")
     parser.addoption("--case-file", default=str(ROOT / "data/search_cases.json"))
     parser.addoption("--cart-case-file", default=str(ROOT / "data/cart_cases.json"))
     parser.addoption(
@@ -39,15 +38,6 @@ def pytest_configure(config: pytest.Config) -> None:
     load_dotenv(ROOT / ".env", override=False)
     if config.getoption("tracing") != "off":
         raise pytest.UsageError("Use EBAY_TRACE, not --tracing; project fixtures own tracing")
-
-
-def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    if config.getoption("--run-e2e"):
-        return
-
-    for item in items:
-        if item.get_closest_marker("e2e"):
-            item.add_marker(pytest.mark.skip(reason="Real-site tests require --run-e2e"))
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:

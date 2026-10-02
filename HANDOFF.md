@@ -2,6 +2,17 @@
 
 Updated: 2026-10-01 (Asia/Jerusalem).
 
+## Documentation and E2E default update (2026-10-02)
+
+Completed: removed the `--run-e2e` pytest option and its collection-time skip behavior.
+The repository now runs its real eBay E2E tests by default. README, pytest marker metadata,
+and this handoff no longer refer to that option. Removed `npx.cmd` commands, Node/npm fallback
+instructions, and the related troubleshooting entry; Allure documentation retains only
+`npm run report` and `npm run report:open`.
+
+Verified: `pytest --collect-only --browser-channel chrome -q` collected all 17 cases without
+the removed option. No live eBay run or Allure report generation was performed for this change.
+
 ## Approved scope
 
 The owner approved section 4.3, an audit of existing code/fixtures/tests/docs, and visible
@@ -90,10 +101,9 @@ subsequently approved committing and pushing these documentation changes.
 
 ## Commands
 
-The owner requested restoring complete newcomer setup instructions. README now includes
-Windows prerequisite installation (including Node.js/npm), cloning, virtual-environment
-setup, full/module/single-scenario commands, and Allure generation/opening and troubleshooting.
-Keep these operational instructions when shortening documentation.
+The owner requested restoring complete newcomer setup instructions. README includes Windows
+prerequisite installation, cloning, virtual-environment setup, full/module/single-scenario
+commands, and the standard Allure report generation/opening commands.
 
 Verification: installed requirements successfully in a new Python 3.13.9 environment under
 `artifacts/readme-install-check`; pip check and all 17 collected cases passed there. The
@@ -105,10 +115,5 @@ No live eBay tests were rerun during this documentation update.
 
 Use the virtual environment and the commands in [README.md](README.md). Keep `EBAY_TRACE=on`
 for evidence and do not also enable plugin tracing. Use a separate `--alluredir` for each run.
-The installed Allure CLI can be invoked directly if npm/npx is absent from the current PATH:
-
-```powershell
-node node_modules/allure/cli.js generate artifacts/<run> --output artifacts/<run>-report
-```
 
 Earlier historical evidence remains in `artifacts/`; prior implementation history remains in Git.

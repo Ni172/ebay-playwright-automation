@@ -26,11 +26,8 @@ Close and reopen PowerShell and your IDE after installation, then verify:
 git --version
 py -3.13 --version
 node --version
-npm.cmd --version
+npm --version
 ```
-
-The `.cmd` suffix avoids PowerShell execution-policy errors from npm's script wrapper.
-It runs the same npm commands; changing the machine's execution policy is unnecessary.
 
 ## 2. Clone and install project dependencies
 
@@ -40,7 +37,7 @@ cd ebay-playwright-automation
 py -3.13 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m pip check
-npm.cmd ci --no-audit --no-fund
+npm ci --no-audit --no-fund
 ```
 
 If you already have the repository, start in its root and skip cloning.
@@ -71,21 +68,21 @@ Collection should list **17 cases**:
 Run the full suite (adds five items to an isolated guest cart):
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest tests/e2e --run-e2e --browser-channel chrome -vv --log-cli-level=INFO
+.\.venv\Scripts\python.exe -m pytest tests/e2e --browser-channel chrome -vv --log-cli-level=INFO
 ```
 
 Or run one module / scenario:
 
 ```powershell
 # Search module: 13 cases; no cart additions
-.\.venv\Scripts\python.exe -m pytest tests/e2e/test_search_submission.py --run-e2e --browser-channel chrome -vv
+.\.venv\Scripts\python.exe -m pytest tests/e2e/test_search_submission.py --browser-channel chrome -vv
 # Cart module: one shopping scenario and three invalid-input cases
-.\.venv\Scripts\python.exe -m pytest tests/e2e/test_add_items_to_cart.py --run-e2e --browser-channel chrome -vv
+.\.venv\Scripts\python.exe -m pytest tests/e2e/test_add_items_to_cart.py --browser-channel chrome -vv
 # Only the 65-result pagination scenario
-.\.venv\Scripts\python.exe -m pytest tests/e2e/test_search_submission.py -k shoes-pagination-under-220-ils --run-e2e --browser-channel chrome -vv
+.\.venv\Scripts\python.exe -m pytest tests/e2e/test_search_submission.py -k shoes-pagination-under-220-ils --browser-channel chrome -vv
 ```
 
-Without `--run-e2e`, tests are skipped. Chrome is visible and maximized; `--headed` is in
+These are real E2E tests by default. Chrome is visible and maximized; `--headed` is in
 `pyproject.toml`. Remove that flag there to run headlessly. To use bundled Chromium instead,
 run `.\.venv\Scripts\python.exe -m playwright install chromium`, then omit `--browser-channel chrome`.
 
@@ -94,8 +91,8 @@ run `.\.venv\Scripts\python.exe -m playwright install chromium`, then omit `--br
 After a test run, including a failed run:
 
 ```powershell
-npm.cmd run report
-npm.cmd run report:open
+npm run report
+npm run report:open
 ```
 
 Results are in `artifacts/allure-results`; the generated report is in `artifacts/allure-report`.
@@ -104,12 +101,10 @@ Keep that terminal open while viewing; press **Ctrl+C** to stop the report serve
 `npm run report` replaces the generated default report. Each pytest run cleans its selected
 Allure results directory, so the default report describes the latest run, not all earlier runs.
 
-To preserve a separate run, use a new directory name each time:
+To preserve raw results from a separate run, use a new directory name:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest tests/e2e --run-e2e --browser-channel chrome -vv --alluredir=artifacts/allure-my-run
-npx.cmd allure generate artifacts/allure-my-run --output artifacts/allure-my-run-report
-npx.cmd allure open artifacts/allure-my-run-report
+.\.venv\Scripts\python.exe -m pytest tests/e2e --browser-channel chrome -vv --alluredir=artifacts/allure-my-run
 ```
 
 Allure includes logs, captured stdout, random seeds, screenshots, and trace attachments.
@@ -140,12 +135,8 @@ Search and cart data are separate. Override inputs with `--case-file`, `--negati
 
 ## Troubleshooting and current limits
 
-- **npm/node not found:** reopen the terminal/IDE after Node.js installation. For a default
-  Windows install, check `& "C:\Program Files\nodejs\npm.cmd" --version` and ensure
-  `C:\Program Files\nodejs` is on PATH. If npx alone is unavailable, replace `npx.cmd allure`
-  with `node node_modules/allure/cli.js`.
-- **All tests skipped / empty report:** use `--run-e2e` for a live run; collection alone does
-  not produce test results. Generate the report from the same results directory used by pytest.
+- **Empty report:** collection alone does not produce test results. Generate the report from the
+  same results directory used by pytest.
 - **Cart budget failure:** eBay's displayed Subtotal includes shipping. Five qualifying items
   can still exceed ILS 1,100; this must fail the assertion. Items are never skipped to make it pass.
 - **eBay error / CAPTCHA / unavailable listing:** retain the evidence and inspect the failure.
