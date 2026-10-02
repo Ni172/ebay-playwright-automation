@@ -135,14 +135,22 @@ Search and cart data are separate. Override inputs with `--case-file`, `--negati
 
 ## Troubleshooting and current limits
 
-- **Empty report:** collection alone does not produce test results. Generate the report from the
-  same results directory used by pytest.
+- **eBay error page, CAPTCHA, or unavailable listing:** this is the main source of live-run
+  instability. eBay can return its `Something went wrong on our end` page after a
+  search, price filtering, pagination, or opening a product. When its visible **Go to homepage**
+  control is available, the test returns Home and retries the original search or product URL once.
+  If the same error occurs again, the test fails and retains its evidence instead of treating the
+  result as empty or silently skipping an item. After an item is already confirmed in the cart, a
+  failed return to the search results continues from Home without repeating that addition. CAPTCHA
+  solving or bypass is out of scope.
 - **Cart budget failure:** eBay's displayed Subtotal includes shipping. Five qualifying items
   can still exceed ILS 1,100; this must fail the assertion. Items are never skipped to make it pass.
-- **eBay error / CAPTCHA / unavailable listing:** retain the evidence and inspect the failure.
-  External availability prevents a guaranteed green run; the project does not bypass CAPTCHA.
-- Every test uses a fresh guest context. An explicit identification function remains pending.
-  Credentials, session state, and generated evidence are excluded from Git. Execution is local only.
+- **Fresh guest context:** every test starts with a new browser context: no login, saved cookies,
+  cart contents, or session data from another test are reused. The project currently tests eBay as
+  a guest; an explicit identification function remains pending.
+- **Local-only execution and repository contents:** tests are run on the local machine, not through
+  CI. Credentials, login/session state, and generated screenshots, traces, and reports are not
+  committed to Git.
 
 Verified locally with Python 3.13.9, Node.js 24.19.0, npm 11.17.0, and the locked Allure 3.19.1.
 For actual live-run outcomes, see [HANDOFF.md](HANDOFF.md); the suite is not currently all green.

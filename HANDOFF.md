@@ -13,6 +13,17 @@ instructions, and the related troubleshooting entry; Allure documentation retain
 Verified: `pytest --collect-only --browser-channel chrome -q` collected all 17 cases without
 the removed option. No live eBay run or Allure report generation was performed for this change.
 
+## Troubleshooting clarification (2026-10-02)
+
+Completed: README now puts eBay error pages, CAPTCHA, and unavailable listings first in
+Troubleshooting. It documents the actual one-time recovery through eBay's **Go to homepage**
+control; a repeated error fails with preserved evidence. It also explains that a confirmed cart
+addition is never repeated when return-to-search fails.
+
+The guest-context and local-only constraints are described in plain language. The owner removed
+the empty-Allure-report note because it is not a project problem. No test code or live execution
+was changed for this documentation-only update.
+
 ## Approved scope
 
 The owner approved section 4.3, an audit of existing code/fixtures/tests/docs, and visible
