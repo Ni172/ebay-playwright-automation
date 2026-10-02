@@ -6,7 +6,7 @@ Python, synchronous Playwright, pytest, JSON data, and Allure. Local execution o
 
 | Component | Responsibility |
 | --- | --- |
-| `pages/search_results_page.py` | Search, visible price filter, XPath result extraction, pagination |
+| `pages/search_results_page.py` | Guest identification, search, price filter, XPath extraction, pagination |
 | `pages/product_page.py` | Available variant selection and cart-addition confirmation |
 | `pages/cart_page.py` | Open the cart and read its displayed item count and subtotal |
 | `pages/ebay_error_page.py` | Recognize eBay's known error and use its Home control |
@@ -45,6 +45,11 @@ warnings without replacing the original test result.
 
 Each case receives a fresh guest context. The random seed combines `EBAY_RANDOM_SEED`
 with a stable hash of the test ID and is recorded in Allure. No persistent login is loaded.
+`SearchResultsPage.identify_as_guest()` requires eBay's signed-out header before each search.
+
+Page objects keep selectors as named constants and expose locator properties. Stable CSS
+attributes such as `data-testid`, `data-test-id`, IDs, and ARIA state are preferred. XPath remains
+limited to result-card extraction because the assignment explicitly requires it there.
 
 ## Business rules
 
@@ -66,6 +71,6 @@ with a stable hash of the test ID and is recorded in Allure. No persistent login
 
 ## Remaining scope
 
-Identification as an explicit Guest function remains pending. The bug review documents
-three findings, explanations, and proposed corrections.
+The bug review documents three findings, explanations, and proposed corrections. The latest
+locator and Guest-identification cleanup still requires a live-site verification run.
 See [HANDOFF.md](../HANDOFF.md) for current verification and limitations.

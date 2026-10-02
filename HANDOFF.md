@@ -2,6 +2,32 @@
 
 Updated: 2026-10-02 (Asia/Jerusalem).
 
+## PR 1 review and locator cleanup (2026-10-02)
+
+Completed: reviewed PR #1 and the full repository against the assignment, with emphasis on the
+README and smart locators. `ProductPage` now uses the observed product-region and `data-testid`
+CSS selectors for variants, Add to cart, and the confirmation layer. The obsolete `#gh-cart-n`
+lookup and page-wide option collection were removed; custom options are scoped to the visible
+listbox. `CartPage` and `EbayErrorPage` now follow the same named-selector and locator-property
+structure as `SearchResultsPage`.
+
+Added the assignment's explicit Guest identification through `identify_as_guest()`. README now
+summarizes all four required responsibilities, distinguishes non-live checks from live results,
+explains mutation behavior, documents the locator strategy, and reports the latest verified
+outcome without claiming an all-green suite. Architecture documentation was aligned. `.gitignore`
+was reviewed and required no change.
+
+Verified: `pip check`, Ruff lint, Ruff format, and collection of all 17 E2E cases passed. The saved
+Playwright trace confirms the selected product, cart, and error-page CSS attributes against the
+previous live DOM.
+
+Follow-up live evidence showed that Add to cart succeeded, but the confirmation title was outside
+the former `x-atc-layer-v3` content element. The confirmation locator now targets the visible
+`ux-overlay` dialog containing that content, using stable test and ARIA attributes. The subsequent
+live cart scenario confirmed all five additions and reached the final budget assertion. It correctly
+failed because the ILS 1,434.56 Subtotal exceeded the ILS 1,100.00 budget. None of the five listings
+required variants, so native-select and custom-listbox variant branches remain live-unverified.
+
 ## Agent coding-guidance update (2026-10-02)
 
 Completed: refined `AGENTS.md` with concise defensive-coding rules for module-level imports,
