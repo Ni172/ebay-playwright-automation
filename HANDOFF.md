@@ -1,6 +1,65 @@
 # Project handoff
 
-Updated: 2026-10-01 (Asia/Jerusalem).
+Updated: 2026-10-02 (Asia/Jerusalem).
+
+## PR 1 review and locator cleanup (2026-10-02)
+
+Completed: reviewed PR #1 and the full repository against the assignment, with emphasis on the
+README and smart locators. `ProductPage` now uses the observed product-region and `data-testid`
+CSS selectors for variants, Add to cart, and the confirmation layer. The obsolete `#gh-cart-n`
+lookup and page-wide option collection were removed; custom options are scoped to the visible
+listbox. `CartPage` and `EbayErrorPage` now follow the same named-selector and locator-property
+structure as `SearchResultsPage`.
+
+Added the assignment's explicit Guest identification through `identify_as_guest()`. README now
+summarizes all four required responsibilities, distinguishes non-live checks from live results,
+explains mutation behavior, documents the locator strategy, and reports the latest verified
+outcome without claiming an all-green suite. Architecture documentation was aligned. `.gitignore`
+was reviewed and required no change.
+
+Verified: `pip check`, Ruff lint, Ruff format, and collection of all 17 E2E cases passed. The saved
+Playwright trace confirms the selected product, cart, and error-page CSS attributes against the
+previous live DOM.
+
+Follow-up live evidence showed that Add to cart succeeded, but the confirmation title was outside
+the former `x-atc-layer-v3` content element. The confirmation locator now targets the visible
+`ux-overlay` dialog containing that content, using stable test and ARIA attributes. The subsequent
+live cart scenario confirmed all five additions and reached the final budget assertion. It correctly
+failed because the ILS 1,434.56 Subtotal exceeded the ILS 1,100.00 budget. None of the five listings
+required variants, so native-select and custom-listbox variant branches remain live-unverified.
+
+## Agent coding-guidance update (2026-10-02)
+
+Completed: refined `AGENTS.md` with concise defensive-coding rules for module-level imports,
+narrow exception handling, accurate errors, missing-value validation, dead-code removal, safe
+pytest control flow, and meaningful constants. Comments should remain beside the relevant logic
+inside functions or methods and normally use no more than one or two precise lines.
+
+No product code, tests, scenarios, or live eBay behavior changed. No test execution was needed for
+this documentation-only update.
+
+## Home-recovery hardening and positive execution (2026-10-02)
+
+Completed: added two full-search attempts through `SearchResultsPage._SEARCH_ATTEMPTS`. When the
+known eBay error page appears during search submission, price filtering, or pagination, the test
+clicks **Go to homepage** and restarts the complete search/filter/collection sequence once.
+Exhausting the attempts fails with evidence and never treats an error as zero results.
+
+Verified: Ruff lint/format and collection of all 17 E2E cases passed after this change. A live run
+of the four positive scenarios immediately before the change produced 3 passes and 1 expected
+budget failure: the cart had all five requested items, but its ILS 1,711.50 Subtotal exceeded the
+ILS 1,100.00 threshold. The corresponding report is in
+`artifacts/allure-positive-20261002-report`.
+
+The earlier live check established that eBay can return the known error page during pagination. The
+full-search loop above has not yet been run against that condition. No mocked or simulated test was
+added, per project policy.
+
+## Results-page URL wait (2026-10-02)
+
+Completed: results-page transitions after a price filter or pagination wait up to 30 seconds for
+the URL to change, replacing the former five-second limit. The page then waits for
+`domcontentloaded`; eBay's ongoing background requests make `networkidle` unsuitable here.
 
 ## Documentation and E2E default update (2026-10-02)
 

@@ -1,7 +1,14 @@
 # eBay Playwright Automation
 
-Local Python E2E tests for eBay: search by price, add five items, and verify the cart Subtotal.
-Stack: synchronous Playwright, pytest, Page Object Model (POM), JSON data, Decimal, and Allure 3.
+Local Python E2E tests for eBay using synchronous Playwright, pytest, Page Object Model (POM),
+external JSON data, `Decimal`, and Allure 3.
+
+The repository implements the assignment's four central responsibilities:
+
+- identify the fresh browser session as an eBay Guest;
+- search by name and price, using pagination when the requested limit exceeds one page;
+- add every returned product, selecting available variants with a reproducible random seed;
+- verify the exact cart item count and the displayed Subtotal against the full budget.
 
 ## 1. Install prerequisites (Windows / PowerShell)
 
@@ -14,7 +21,7 @@ winget install --id Google.Chrome --exact --source winget
 winget install --id OpenJS.NodeJS.LTS --exact --source winget --accept-package-agreements --accept-source-agreements
 ```
 
-Node.js LTS includes **npm and npx**; do not install them separately. Node.js is used only
+Node.js LTS includes **npm**; do not install it separately. Node.js is used only
 for Allure reports; the tests remain Python. This Allure 3 setup does not require Java.
 If winget is unavailable, use the official installers for [Git](https://git-scm.com/downloads/win),
 [Python](https://www.python.org/downloads/windows/), [Chrome](https://www.google.com/chrome/),
@@ -71,6 +78,9 @@ Run the full suite (adds five items to an isolated guest cart):
 .\.venv\Scripts\python.exe -m pytest tests/e2e --browser-channel chrome -vv --log-cli-level=INFO
 ```
 
+This command contacts the live eBay site. The shopping scenario changes only its fresh guest
+context by adding five items to that context's cart; it does not sign in or complete a purchase.
+
 Or run one module / scenario:
 
 ```powershell
@@ -124,7 +134,7 @@ navigation timeout 30 seconds, and `EBAY_TRACE=on`. Do not also enable plugin `-
 
 | Location | Responsibility |
 | --- | --- |
-| `pages/` | Page locators and interactions, including XPath search-result extraction |
+| `pages/` | Guest identification and page interactions, including XPath result extraction |
 | `flows/shopping_flow.py` | Visit each product, select available variants, confirm additions |
 | `tests/e2e/`, `utils/cart_assertions.py` | Scenario expectations and exact count / budget assertions |
 | `conftest.py`, `config/` | Browser fixtures, isolated contexts, configuration, reproducible seeds |
@@ -132,6 +142,27 @@ navigation timeout 30 seconds, and `EBAY_TRACE=on`. Do not also enable plugin `-
 
 Search and cart data are separate. Override inputs with `--case-file`, `--negative-case-file`,
 `--cart-case-file`, or `--invalid-cart-case-file`. See [architecture](docs/architecture.md).
+
+Page objects keep selectors as named constants and expose reusable locator properties. Use CSS or
+XPath—whichever is clearer and more reliable—with stable attributes such as `data-testid`,
+`data-test-id`, IDs, and ARIA state. XPath is required for search-result extraction by the assignment.
+
+## Verified local results
+
+The latest non-live verification on 2 October 2026 passed `pip check`, Ruff lint and format, and
+collected all 17 E2E cases. No mocked, simulated, or additional test layer is included.
+
+The latest positive live run on 2 October 2026 completed all three search scenarios and the cart
+scenario: three passed, while the cart scenario correctly failed its budget assertion after all
+five items were present. The displayed ILS 1,711.50 Subtotal exceeded the ILS 1,100.00 threshold.
+Its generated report is stored locally under `artifacts/allure-positive-20261002-report`; generated
+reports, screenshots, and traces are intentionally ignored by Git.
+
+After the locator and explicit Guest-identification cleanup, the cart scenario was rerun live. It
+confirmed all five additions and reached the final assertion, where the displayed ILS 1,434.56
+Subtotal correctly failed against the ILS 1,100.00 budget. This verifies the updated Add-to-cart
+confirmation locator; none of those five listings exercised a variant-selection branch. See
+[HANDOFF.md](HANDOFF.md) for the full-run history and exact evidence directories.
 
 ## Troubleshooting and current limits
 
@@ -147,13 +178,13 @@ Search and cart data are separate. Override inputs with `--case-file`, `--negati
   can still exceed ILS 1,100; this must fail the assertion. Items are never skipped to make it pass.
 - **Fresh guest context:** every test starts with a new browser context: no login, saved cookies,
   cart contents, or session data from another test are reused. The project currently tests eBay as
-  a guest; an explicit identification function remains pending.
+  a guest, and `identify_as_guest()` requires the signed-out identity region before searching.
 - **Local-only execution and repository contents:** tests are run on the local machine, not through
   CI. Credentials, login/session state, and generated screenshots, traces, and reports are not
   committed to Git.
 
 Verified locally with Python 3.13.9, Node.js 24.19.0, npm 11.17.0, and the locked Allure 3.19.1.
-For actual live-run outcomes, see [HANDOFF.md](HANDOFF.md); the suite is not currently all green.
+The suite is not currently all green because live shipping charges can exceed the required budget.
 
 [Assignment](docs/assignment/automation-developer-assignment.docx) ·
 [Bug review](ReadMeAIBugs.md) · [Working rules](AGENTS.md) ·

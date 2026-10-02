@@ -30,8 +30,18 @@
 - Prefer code that is easy to follow over clever or compressed expressions.
 - Use descriptive names, explicit construction, and shallow control flow.
 - Keep helpers focused; add an abstraction only when it makes an actual responsibility clearer.
-- Add brief comments explaining non-obvious decisions, lifecycle ordering, and constraints. Do not narrate obvious statements or add large comment blocks.
+- Put comments inside the relevant function or method, next to the logic they clarify. Keep them precise and normally limited to one or two short lines that explain a non-obvious decision, lifecycle ordering, or constraint; do not narrate obvious statements or add large comment blocks.
 - Keep docstrings short and practical. Avoid speculative framework layers.
+
+## Defensive coding
+
+- Keep imports at module level and Ruff-organized. Use a local import only when necessary to resolve a documented import cycle.
+- Catch the narrowest applicable exception type. Never use a bare `except` or a broad exception handler that can hide unrelated test failures.
+- Make exception messages describe the operation and observed state accurately.
+- Validate optional, missing, and empty values before dereferencing or indexing them.
+- Do not commit dead, unreachable, or commented-out code.
+- Do not exit a pytest test early to avoid a failure; use an explicit assertion or `pytest.fail`.
+- Use configuration or class-level constants for meaningful repeated values. Do not create abstractions merely to replace self-explanatory literals.
 
 ## Deliverables
 
