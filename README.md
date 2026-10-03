@@ -67,26 +67,43 @@ Collection should list **17 cases**:
 
 | Coverage | Cases |
 | --- | ---: |
+| **Main E2E: search, add all five items, verify cart count and Subtotal** | **1** |
 | Search: five results under ILS 220, zero under ILS 0.01, 65 across two pages (60 + 5) | 3 |
 | Invalid search inputs rejected before navigation | 10 |
-| Search, add all five items, verify cart count and Subtotal | 1 |
 | Invalid cart URL lists rejected before navigation | 3 |
 
-Run the full suite (adds five items to an isolated guest cart):
+### Run the main E2E test (recommended)
+
+This is the core assignment scenario: it searches, adds all five returned items to a fresh guest
+cart, verifies the exact cart count, and reads the displayed Subtotal.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/e2e/test_add_items_to_cart.py::test_searches_and_adds_every_eligible_item --browser-channel chrome -vv
+```
+
+This command contacts live eBay. It may correctly fail the budget assertion when eBay shipping
+makes the displayed Subtotal exceed ILS 1,100.00; that result still proves the full cart flow ran.
+
+### Run the full suite (when needed)
+
+eBay can intermittently show its external **eBay error page** during search, filtering,
+pagination, or product navigation. Prefer the main E2E test above for a focused verification of
+the assignment's central flow. Use the full suite when you specifically need its broader search
+and input-validation coverage:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests/e2e --browser-channel chrome -vv --log-cli-level=INFO
 ```
 
-This command contacts the live eBay site. The shopping scenario changes only its fresh guest
-context by adding five items to that context's cart; it does not sign in or complete a purchase.
+The shopping scenario changes only its fresh guest context by adding five items to that context's
+cart; it does not sign in or complete a purchase.
 
 Or run one module / scenario:
 
 ```powershell
 # Search module: 13 cases; no cart additions
 .\.venv\Scripts\python.exe -m pytest tests/e2e/test_search_submission.py --browser-channel chrome -vv
-# Cart module: one shopping scenario and three invalid-input cases
+# Cart module: the main shopping scenario and three invalid-input cases
 .\.venv\Scripts\python.exe -m pytest tests/e2e/test_add_items_to_cart.py --browser-channel chrome -vv
 # Only the 65-result pagination scenario
 .\.venv\Scripts\python.exe -m pytest tests/e2e/test_search_submission.py -k shoes-pagination-under-220-ils --browser-channel chrome -vv
@@ -162,7 +179,7 @@ After the locator and explicit Guest-identification cleanup, the cart scenario w
 confirmed all five additions and reached the final assertion, where the displayed ILS 1,434.56
 Subtotal correctly failed against the ILS 1,100.00 budget. This verifies the updated Add-to-cart
 confirmation locator; none of those five listings exercised a variant-selection branch. See
-[HANDOFF.md](HANDOFF.md) for the full-run history and exact evidence directories.
+the local Allure artifacts for the full-run history and exact evidence directories.
 
 ## Troubleshooting and current limits
 

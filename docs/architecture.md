@@ -73,4 +73,3 @@ limited to result-card extraction because the assignment explicitly requires it 
 
 The bug review documents three findings, explanations, and proposed corrections. The latest
 locator and Guest-identification cleanup still requires a live-site verification run.
-See [HANDOFF.md](../HANDOFF.md) for current verification and limitations.
