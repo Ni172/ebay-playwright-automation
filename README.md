@@ -33,7 +33,7 @@ Close and reopen PowerShell and your IDE after installation, then verify:
 git --version
 py -3.13 --version
 node --version
-npm --version
+npm.cmd --version
 ```
 
 ## 2. Clone and install project dependencies
@@ -44,7 +44,7 @@ cd ebay-playwright-automation
 py -3.13 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m pip check
-npm ci --no-audit --no-fund
+npm.cmd ci --no-audit --no-fund
 ```
 
 If you already have the repository, start in its root and skip cloning.
@@ -129,8 +129,8 @@ Headless mode does not bypass CAPTCHA and may still be blocked by eBay.
 After a test run, including a failed run:
 
 ```powershell
-npm run report
-npm run report:open
+npm.cmd run report
+npm.cmd run report:open
 ```
 
 Results are in `artifacts/allure-results`; the generated report is in `artifacts/allure-report`.

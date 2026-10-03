@@ -116,7 +116,8 @@ class ProductPage(BasePage):
                 continue
 
             variant_name, separator, current_value = control.inner_text().partition(":")
-            if not separator or current_value.strip().casefold() not in {"select", "choose"}:
+            current_value = current_value.lstrip(":").strip()
+            if not separator or current_value.casefold() not in {"select", "choose"}:
                 continue
 
             variant_name = variant_name.strip()
