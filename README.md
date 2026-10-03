@@ -110,8 +110,19 @@ Or run one module / scenario:
 ```
 
 These are real E2E tests by default. Chrome is visible and maximized; `--headed` is in
-`pyproject.toml`. Remove that flag there to run headlessly. To use bundled Chromium instead,
-run `.\.venv\Scripts\python.exe -m playwright install chromium`, then omit `--browser-channel chrome`.
+`pyproject.toml`. To use bundled Chromium instead, run
+`.\.venv\Scripts\python.exe -m playwright install chromium`, then omit `--browser-channel chrome`.
+
+### Run headlessly
+
+The default configuration runs Chrome visibly. To run the main E2E scenario headlessly, override
+the configured `--headed` option:
+
+```powershell
+python -m pytest -o addopts="" tests\e2e\test_add_items_to_cart.py::test_searches_and_adds_every_eligible_item --browser-channel chrome -vv -ra --strict-markers --capture=tee-sys --clean-alluredir --alluredir=artifacts\allure-headless-results
+```
+
+Headless mode does not bypass CAPTCHA and may still be blocked by eBay.
 
 ## 4. Generate and open Allure
 
@@ -163,6 +174,17 @@ Search and cart data are separate. Override inputs with `--case-file`, `--negati
 Page objects keep selectors as named constants and expose reusable locator properties. Use CSS or
 XPath—whichever is clearer and more reliable—with stable attributes such as `data-testid`,
 `data-test-id`, IDs, and ARIA state. XPath is required for search-result extraction by the assignment.
+
+### Key pytest fixtures
+
+| Fixture | Responsibility |
+| --- | --- |
+| `settings` | Loads validated project settings from environment variables and `.env`. |
+| `browser_type_launch_args` | Applies Chromium launch arguments, including maximized browser startup. |
+| `browser_context_args` | Configures each fresh context with the eBay base URL, locale, and native viewport. |
+| `context` | Sets timeouts and starts/stops Playwright tracing. The underlying `pytest-playwright` fixture owns context cleanup; closing the context also closes its pages. |
+| `rng` | Creates a reproducible random generator per test and records its seed in Allure. |
+| `screenshot` | Attaches named screenshots to the Allure report. |
 
 ## Verified local results
 
