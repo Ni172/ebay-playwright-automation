@@ -68,8 +68,3 @@ limited to result-card extraction because the assignment explicitly requires it 
 - Missing, ambiguous, or non-ILS cart values fail; an empty cart cannot pass the shopping case.
 - Known initial search/product errors allow one recovery through Home. A failed return to
   search may continue from Home without repeating a confirmed addition. No CAPTCHA bypass.
-
-## Remaining scope
-
-The bug review documents three findings, explanations, and proposed corrections. The latest
-locator and Guest-identification cleanup still requires a live-site verification run.

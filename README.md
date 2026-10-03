@@ -188,20 +188,12 @@ XPath—whichever is clearer and more reliable—with stable attributes such as 
 
 ## Verified local results
 
-The latest non-live verification on 2 October 2026 passed `pip check`, Ruff lint and format, and
-collected all 17 E2E cases. No mocked, simulated, or additional test layer is included.
+The local non-live verification passes `pip check`, Ruff lint and format, and collection of all
+17 E2E cases. No mocked, simulated, or additional test layer is included.
 
-The latest positive live run on 2 October 2026 completed all three search scenarios and the cart
-scenario: three passed, while the cart scenario correctly failed its budget assertion after all
-five items were present. The displayed ILS 1,711.50 Subtotal exceeded the ILS 1,100.00 threshold.
-Its generated report is stored locally under `artifacts/allure-positive-20261002-report`; generated
-reports, screenshots, and traces are intentionally ignored by Git.
-
-After the locator and explicit Guest-identification cleanup, the cart scenario was rerun live. It
-confirmed all five additions and reached the final assertion, where the displayed ILS 1,434.56
-Subtotal correctly failed against the ILS 1,100.00 budget. This verifies the updated Add-to-cart
-confirmation locator; none of those five listings exercised a variant-selection branch. See
-the local Allure artifacts for the full-run history and exact evidence directories.
+One full-suite run and one execution of the core shopping scenario were blocked by eBay CAPTCHA.
+The resulting Allure evidence records the blocked executions honestly; CAPTCHA solving or bypass
+is out of scope.
 
 ## Troubleshooting and current limits
 
