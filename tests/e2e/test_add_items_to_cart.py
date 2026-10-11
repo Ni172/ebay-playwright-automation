@@ -12,6 +12,7 @@ pytestmark = pytest.mark.e2e
 
 def test_searches_and_adds_every_eligible_item(page, cart_case, rng, screenshot):
     search_page = SearchResultsPage(page)
+    shopping_flow = ShoppingFlow(page, rng, screenshot)
 
     print(
         f"Search {cart_case.query!r} for {cart_case.limit} items "
@@ -21,11 +22,13 @@ def test_searches_and_adds_every_eligible_item(page, cart_case, rng, screenshot)
         cart_case.query,
         cart_case.max_price,
         cart_case.limit,
+        accept_url=shopping_flow.accepts_cart_candidate,
     )
-    assert len(urls) == cart_case.limit
+    assert len(urls) == cart_case.limit, (
+        f"Expected {cart_case.limit} items with Add to cart; found {len(urls)}"
+    )
     print(f"Collected {len(urls)} URLs; add every URL")
 
-    shopping_flow = ShoppingFlow(page, rng, screenshot)
     added_items = shopping_flow.add_items_to_cart(urls)
 
     assert [item.url for item in added_items] == urls

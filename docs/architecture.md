@@ -59,6 +59,10 @@ limited to result-card extraction because the assignment explicitly requires it 
   are excluded. URLs are unique and pagination stops at the limit or end of results.
 - Three search rows cover five results, zero results, and 65 results across two pages.
   The separate cart row requires every one of five returned URLs.
+- For the cart row, search invokes `ShoppingFlow.accepts_cart_candidate` before counting a URL.
+  The flow opens and closes a temporary tab; `ProductPage.has_add_to_cart` checks the control.
+  Rejected candidates receive a log and screenshot, and collection continues to the same limit.
+  This owner-approved precheck does not guarantee a later addition or relax count assertions.
 - Product selections use available variants. Confirmed additions receive a log and screenshot.
 - Cart verification reads the site's Subtotal, including its displayed shipping charges.
   It requires the expected item count and compares against `budget_per_item * items_count`.

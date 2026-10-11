@@ -44,6 +44,7 @@ class ProductPage(BasePage):
         ':has([data-testid="x-atc-layer-v3"])'
     )
     _ADD_CONFIRMATION_TEXT = "Added to cart"
+    _CART_CONTROL_CHECK_TIMEOUT_MS = 5_000
     _UNAVAILABLE_TEXTS = (
         "This listing was ended by the seller",
         "This item is no longer available",
@@ -75,6 +76,18 @@ class ProductPage(BasePage):
         return self.page.locator(self._ADD_CONFIRMATION_SELECTOR).filter(
             has_text=self._ADD_CONFIRMATION_TEXT
         )
+
+    def has_add_to_cart(self) -> bool:
+        """Check button visibility after a product page loads, without selecting variants."""
+        self.page.locator(self._PRODUCT_REGION_SELECTOR).wait_for(state="visible")
+        try:
+            # A disabled button still qualifies: variants are chosen during addition.
+            self.add_to_cart_control.wait_for(
+                state="visible", timeout=self._CART_CONTROL_CHECK_TIMEOUT_MS
+            )
+        except TimeoutError:
+            return False
+        return True
 
     def select_available_variants(self, rng: random.Random) -> tuple[VariantSelection, ...]:
         """Choose one enabled value from every visible required variant control."""

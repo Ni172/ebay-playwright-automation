@@ -1,6 +1,7 @@
 """Search-page interactions and result-card locators for eBay."""
 
 import logging
+from collections.abc import Callable
 from decimal import Decimal, InvalidOperation
 from urllib.parse import parse_qs, urljoin, urlsplit
 
@@ -121,7 +122,12 @@ class SearchResultsPage(BasePage):
         return True
 
     def search_items_by_name_under_price(
-        self, query: str, max_price: Decimal, limit: int = 5
+        self,
+        query: str,
+        max_price: Decimal,
+        limit: int = 5,
+        *,
+        accept_url: Callable[[str], bool] | None = None,
     ) -> list[str]:
         """Search, apply eBay's available max-price filter, and collect matching URLs.
 
@@ -137,7 +143,7 @@ class SearchResultsPage(BasePage):
                 self.open_search_home()
                 self.search(query)
                 self.apply_max_price_filter(max_price)
-                return self._collect_eligible_urls_across_pages(max_price, limit)
+                return self._collect_eligible_urls_across_pages(max_price, limit, accept_url)
             except EbaySearchError as exc:
                 if not self.error_page.go_to_home_if_displayed():
                     raise
@@ -153,7 +159,9 @@ class SearchResultsPage(BasePage):
 
         raise AssertionError("The configured full-search retry loop should always return or raise")
 
-    def _collect_eligible_urls_across_pages(self, max_price: Decimal, limit: int) -> list[str]:
+    def _collect_eligible_urls_across_pages(
+        self, max_price: Decimal, limit: int, accept_url: Callable[[str], bool] | None
+    ) -> list[str]:
         """Collect eligible URLs through pagination after a successful filtered search."""
         eligible_urls: list[str] = []
         seen_urls: set[str] = set()
@@ -166,7 +174,7 @@ class SearchResultsPage(BasePage):
             seen_pages.add(self.page.url)
             self._last_visited_results_pages = tuple(visited_pages)
             count_before_page = len(eligible_urls)
-            self._append_eligible_urls(eligible_urls, seen_urls, max_price, limit)
+            self._append_eligible_urls(eligible_urls, seen_urls, max_price, limit, accept_url)
             eligible_counts_by_page.append(len(eligible_urls) - count_before_page)
             self._last_eligible_counts_by_page = tuple(eligible_counts_by_page)
             if len(eligible_urls) == limit or not self.go_to_next_results_page():
@@ -273,7 +281,12 @@ class SearchResultsPage(BasePage):
         return eligible_urls
 
     def _append_eligible_urls(
-        self, eligible_urls: list[str], seen_urls: set[str], max_price: Decimal, limit: int
+        self,
+        eligible_urls: list[str],
+        seen_urls: set[str],
+        max_price: Decimal,
+        limit: int,
+        accept_url: Callable[[str], bool] | None = None,
     ) -> None:
         for index in range(self.result_cards.count()):
             card = self.result_cards.nth(index)
@@ -296,8 +309,10 @@ class SearchResultsPage(BasePage):
             if not url or url in seen_urls:
                 continue
 
-            eligible_urls.append(url)
             seen_urls.add(url)
+            if accept_url is not None and not accept_url(url):
+                continue
+            eligible_urls.append(url)
             if len(eligible_urls) == limit:
                 break
 

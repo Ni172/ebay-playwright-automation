@@ -11,6 +11,7 @@ from playwright.sync_api import Page, Response
 from pages.base_page import EbayNavigationError
 from pages.ebay_error_page import EbayErrorPage
 from pages.product_page import ProductPage, ProductUnavailableError, VariantSelection
+from utils.evidence import attach_screenshot
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,6 +38,22 @@ class ShoppingFlow:
         self.capture_screenshot = capture_screenshot
         self.error_page = EbayErrorPage(page)
         self.product_page = ProductPage(page)
+
+    def accepts_cart_candidate(self, url: str) -> bool:
+        """Inspect a candidate in a temporary tab without disturbing search results."""
+        candidate_page = self.page.context.new_page()
+        try:
+            response = candidate_page.goto(url, wait_until="domcontentloaded")
+            self._require_successful_navigation(response, url)
+            if EbayErrorPage(candidate_page).is_displayed():
+                raise EbayNavigationError(f"eBay returned its error page while checking {url!r}")
+            if ProductPage(candidate_page).has_add_to_cart():
+                return True
+            LOGGER.warning("Excluded search candidate without Add to cart: %s", url)
+            attach_screenshot(candidate_page, "candidate-without-add-to-cart")
+            return False
+        finally:
+            candidate_page.close()
 
     def add_items_to_cart(
         self,

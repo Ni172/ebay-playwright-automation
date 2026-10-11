@@ -77,6 +77,13 @@ Collection should list **17 cases**:
 This is the core assignment scenario: it searches, adds all five returned items to a fresh guest
 cart, verifies the exact cart count, and reads the displayed Subtotal.
 
+As an owner-approved refinement, this scenario first opens each price-qualified candidate in
+a temporary tab and requires a visible Add to cart control (it may be disabled until variants
+are selected). Candidates without that control are logged and captured in Allure, and collection
+continues through the existing pagination until five qualify or results end. Fewer than five
+still fails. Navigation failures remain errors, and every accepted URL must later be added
+successfully. Search-only scenarios retain their price-only selection.
+
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests/e2e/test_add_items_to_cart.py::test_searches_and_adds_every_eligible_item --browser-channel chrome -vv
 ```
