@@ -1,6 +1,7 @@
 """Search-page interactions and result-card locators for eBay."""
 
 import logging
+import re
 from collections.abc import Callable
 from decimal import Decimal, InvalidOperation
 from urllib.parse import parse_qs, urljoin, urlsplit
@@ -24,6 +25,7 @@ class SearchResultsPage(BasePage):
     _RESULT_CARDS_XPATH = "xpath=//li[contains(@class, 's-card')]"
     _RESULT_LINK_XPATH = "xpath=.//a[contains(@class, 's-card__link')][@href]"
     _RESULT_PRICE_XPATH = "xpath=(.//*[contains(@class, 's-card__price')])[1]"
+    _RESULT_COUNT_SELECTOR = ".srp-controls__count-heading"
     _GUEST_IDENTITY_SELECTOR = ".gh-identity-signed-out-unrecognized"
     _SEARCH_INPUT_PLACEHOLDER = "Search for anything"
     _SHIPPING_DIALOG_TEXT = "Are you shipping to"
@@ -75,6 +77,7 @@ class SearchResultsPage(BasePage):
 
         self._submit_search(query)
         if self._wait_for_search_outcome(query) == "results":
+            self._wait_for_results_ready()
             return
         raise EbaySearchError("eBay returned its error page after search submission")
 
@@ -101,6 +104,20 @@ class SearchResultsPage(BasePage):
             arg={"query": query.casefold(), "errorText": self.error_page.MESSAGE},
         )
         return outcome.json_value()
+
+    def _wait_for_results_ready(self) -> None:
+        """Wait for a populated result card, explicit zero results, or the known error."""
+        result = self.result_cards.filter(has=self.page.locator(self._RESULT_LINK_XPATH)).filter(
+            has=self.page.locator(self._RESULT_PRICE_XPATH).filter(has_text=re.compile(r"\d"))
+        )
+        no_results = self.page.locator(self._RESULT_COUNT_SELECTOR).filter(
+            has_text=re.compile(r"^\s*0\s+results\b", re.IGNORECASE)
+        )
+        result.or_(no_results).or_(self.error_page.message).first.wait_for(
+            state="visible", timeout=self._RESULTS_CHANGE_TIMEOUT_MS
+        )
+        if self.error_page.is_displayed():
+            raise EbaySearchError("eBay returned its error page while waiting for search results")
 
     def confirm_shipping_destination_if_present(self, wait_timeout_ms: int = 0) -> bool:
         """Confirm eBay's already displayed shipping destination when its dialog is open."""
@@ -341,4 +358,5 @@ class SearchResultsPage(BasePage):
             raise EbaySearchError(
                 "eBay returned its error page after price filtering or pagination"
             )
+        self._wait_for_results_ready()
         return True
