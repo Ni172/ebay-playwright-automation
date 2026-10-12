@@ -48,7 +48,7 @@ with a stable hash of the test ID and is recorded in Allure. No persistent login
 `SearchResultsPage.identify_as_guest()` requires eBay's signed-out header before each search.
 
 Page objects keep selectors as named constants and expose locator properties. Stable CSS
-attributes such as `data-testid`, `data-test-id`, IDs, and ARIA state are preferred. XPath remains
+attributes such as `data-testid`, `data-test-id` and IDs are preferred. XPath remains
 limited to result-card extraction because the assignment explicitly requires it there.
 
 ## Business rules

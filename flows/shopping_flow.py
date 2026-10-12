@@ -47,10 +47,17 @@ class ShoppingFlow:
             self._require_successful_navigation(response, url)
             if EbayErrorPage(candidate_page).is_displayed():
                 raise EbayNavigationError(f"eBay returned its error page while checking {url!r}")
-            if ProductPage(candidate_page).has_add_to_cart():
+            product_page = ProductPage(candidate_page)
+            if product_page.has_add_to_cart():
                 return True
             LOGGER.warning("Excluded search candidate without Add to cart: %s", url)
-            attach_screenshot(candidate_page, "candidate-without-add-to-cart")
+            item_id = urlsplit(url).path.rstrip("/").rsplit("/", 1)[-1]
+            attach_screenshot(
+                candidate_page,
+                f"candidate-{item_id}-without-add-to-cart",
+                region=product_page.purchase_actions,
+                reason="Candidate excluded: Add to cart did not become visible before timeout.",
+            )
             return False
         finally:
             candidate_page.close()

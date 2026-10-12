@@ -180,7 +180,7 @@ Search and cart data are separate. Override inputs with `--case-file`, `--negati
 
 Page objects keep selectors as named constants and expose reusable locator properties. Use CSS or
 XPath—whichever is clearer and more reliable—with stable attributes such as `data-testid`,
-`data-test-id`, IDs, and ARIA state. XPath is required for search-result extraction by the assignment.
+`data-test-id` and IDs. XPath is required for search-result extraction by the assignment.
 
 ### Key pytest fixtures
 

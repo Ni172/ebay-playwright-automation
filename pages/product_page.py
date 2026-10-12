@@ -39,6 +39,7 @@ class ProductPage(BasePage):
     )
     _VISIBLE_LISTBOX_SELECTOR = '[role="listbox"]:visible'
     _ADD_TO_CART_SELECTOR = '[data-testid="x-atc-action"] [data-testid="ux-call-to-action"]'
+    _PURCHASE_ACTIONS_SELECTOR = '[data-testid="x-buybox-cta"]'
     _ADD_CONFIRMATION_SELECTOR = (
         '[data-testid="ux-overlay"][role="dialog"][aria-hidden="false"]'
         ':has([data-testid="x-atc-layer-v3"])'
@@ -64,6 +65,11 @@ class ProductPage(BasePage):
     def visible_variant_listbox(self) -> Locator:
         """Return the currently open custom variant listbox."""
         return self.page.locator(self._VISIBLE_LISTBOX_SELECTOR).first
+
+    @property
+    def purchase_actions(self) -> Locator:
+        """Return the purchase controls for focused rejection evidence."""
+        return self.page.locator(self._PURCHASE_ACTIONS_SELECTOR)
 
     @property
     def add_to_cart_control(self) -> Locator:

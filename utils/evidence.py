@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 
 import allure
-from playwright.sync_api import BrowserContext, Error, Page, TimeoutError
+from playwright.sync_api import BrowserContext, Error, Locator, Page, TimeoutError
 
 LOGGER = logging.getLogger(__name__)
 
@@ -34,12 +34,30 @@ def _wait_for_visible_content(page: Page) -> None:
         LOGGER.warning("Viewport content did not finish loading before the screenshot timeout")
 
 
-def attach_screenshot(page: Page, name: str) -> None:
+def attach_screenshot(
+    page: Page, name: str, *, region: Locator | None = None, reason: str | None = None
+) -> None:
     """Best-effort evidence must not replace the original test failure."""
     if page.is_closed():
         return
 
     try:
+        if reason is not None:
+            allure.attach(
+                f"Reason: {reason}\nURL: {page.url}\nPage title: {page.title()}",
+                name=f"{name}-details",
+                attachment_type=allure.attachment_type.TEXT,
+            )
+        if region is not None:
+            try:
+                region.scroll_into_view_if_needed(timeout=5_000)
+                _wait_for_visible_content(page)
+                image = region.screenshot(animations="disabled", timeout=15_000)
+                allure.attach(image, name=name, attachment_type=allure.attachment_type.PNG)
+                return
+            except Error:
+                # A missing or changing evidence region must not hide the original outcome.
+                LOGGER.warning("Could not capture region %s; falling back to viewport", name)
         _wait_for_visible_content(page)
         # A viewport image stays readable in Allure. Full-page images from eBay can be
         # over 10,000 px tall, so Allure shrinks their content into a tiny preview.
