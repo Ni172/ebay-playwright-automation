@@ -33,7 +33,8 @@ class SearchResultsPage(BasePage):
     _MIN_PRICE_INPUT_LABEL = "Minimum Value in ILS"
     _MAX_PRICE_INPUT_LABEL = "Maximum Value in ILS"
     _SUBMIT_PRICE_RANGE_XPATH = "xpath=//button[@title='Submit price range']"
-    _PRICE_FILTER_CONTROL = "button:has-text('Price'), summary:has-text('Price')"
+    _PRICE_FILTER_DETAILS_SELECTOR = "details:has(> summary:has-text('Price'))"
+    _PRICE_FILTER_BUTTON_SELECTOR = "button:has-text('Price')"
     _NEXT_PAGE_XPATH = (
         "xpath=//a[contains(@class, 'pagination__next') and @href and not(@aria-disabled='true')]"
     )
@@ -217,15 +218,23 @@ class SearchResultsPage(BasePage):
             min_input.wait_for(state="visible", timeout=2_000)
             max_input.wait_for(state="visible", timeout=2_000)
         except PlaywrightTimeoutError:
-            price_control = self.page.locator(self._PRICE_FILTER_CONTROL).first
-            if not price_control.count() or not price_control.is_visible():
-                return False
-            price_control.click()
+            price_section = self.page.locator(self._PRICE_FILTER_DETAILS_SELECTOR).first
+            if price_section.count() and price_section.is_visible():
+                price_section.scroll_into_view_if_needed()
+                if price_section.get_attribute("open") is None:
+                    price_section.locator("summary").click()
+            else:
+                price_button = self.page.locator(self._PRICE_FILTER_BUTTON_SELECTOR).first
+                if not price_button.count() or not price_button.is_visible():
+                    return False
+                price_button.click()
             try:
-                min_input.wait_for(state="visible", timeout=2_000)
-                max_input.wait_for(state="visible", timeout=2_000)
-            except PlaywrightTimeoutError:
-                return False
+                min_input.wait_for(state="visible", timeout=5_000)
+                max_input.wait_for(state="visible", timeout=5_000)
+            except PlaywrightTimeoutError as exc:
+                raise EbaySearchError(
+                    "eBay Price control is present, but the ILS min/max inputs are unavailable"
+                ) from exc
 
         max_price_text = format(max_price.normalize(), "f")
         self._type_price_value(min_input, "0")

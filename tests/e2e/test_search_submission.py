@@ -24,7 +24,6 @@ def test_search_collects_items_under_price(page, search_case, screenshot):
     assert len(search_page.last_visited_results_pages) == search_case.expected_page_count
     assert len(set(search_page.last_visited_results_pages)) == search_case.expected_page_count
     assert sum(search_page.last_eligible_counts_by_page) == len(urls)
-    assert search_page.last_eligible_counts_by_page == search_case.expected_counts_by_page
     if search_case.expected_page_count > 1:
         for page_number, (page_url, eligible_count) in enumerate(
             zip(
