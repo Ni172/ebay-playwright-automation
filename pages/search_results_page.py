@@ -237,9 +237,13 @@ class SearchResultsPage(BasePage):
                 ) from exc
 
         max_price_text = format(max_price.normalize(), "f")
-        self._type_price_value(min_input, "0")
+        # eBay leaves a zero minimum blank, which means no lower price bound.
         self._type_price_value(max_input, max_price_text)
-        if max_input.input_value() != max_price_text:
+        try:
+            retained_max_price = Decimal(max_input.input_value())
+        except InvalidOperation as exc:
+            raise EbaySearchError("eBay did not retain a numeric maximum-price input") from exc
+        if retained_max_price != max_price:
             raise EbaySearchError("eBay did not retain the requested maximum-price input")
 
         submit_button = self.page.locator(self._SUBMIT_PRICE_RANGE_XPATH)
@@ -263,7 +267,7 @@ class SearchResultsPage(BasePage):
         price_input.press("Control+A")
         price_input.press("Backspace")
         # eBay's controlled price inputs can discard values injected by fill().
-        price_input.press_sequentially(value, delay=50)
+        price_input.press_sequentially(value)
         price_input.press("Tab")
 
     def _assert_max_price_in_url(self, max_price: Decimal) -> None:
