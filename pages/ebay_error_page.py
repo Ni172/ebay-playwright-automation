@@ -1,5 +1,7 @@
 """Interactions for eBay's known recoverable error page."""
 
+from urllib.parse import urlsplit
+
 from playwright.sync_api import Locator, Page, TimeoutError
 
 
@@ -8,11 +10,11 @@ class EbayRecoveryError(RuntimeError):
 
 
 class EbayErrorPage:
-    """Recognize the known eBay error page and return through its Home control."""
+    """Recognize the known eBay error page and return to the configured Home."""
 
     MESSAGE = "Something went wrong on our end"
     _ERROR_INFO_SELECTOR = "#error-info"
-    _HOME_LINK_SELECTOR = '.status--container a.fake-btn[href="https://www.ebay.com"]'
+    _HOME_LINK_SELECTOR = ".status--container a.fake-btn"
     _HOME_SEARCH_SELECTOR = 'input[placeholder="Search for anything"]'
     _CHALLENGE_PATH = "/splashui/challenge"
     _HOME_READY_TIMEOUT_MS = 30_000
@@ -28,54 +30,42 @@ class EbayErrorPage:
     @property
     def go_to_home_control(self) -> Locator:
         """Return the error page's stable Home link."""
-        return self.page.locator(self._HOME_LINK_SELECTOR)
+        return self.page.locator(self._HOME_LINK_SELECTOR).filter(has_text="Go to homepage")
 
     def is_displayed(self) -> bool:
         """Return whether the known error message is visible."""
         return self.message.is_visible()
 
     def go_to_home_if_displayed(self) -> bool:
-        """Click the error page's visible Home control when available."""
+        """Open the configured Home when the error page offers its Home control."""
         if not self.is_displayed():
             return False
 
         if not self.go_to_home_control.is_visible():
             return False
 
-        self.go_to_home_control.click()
+        # Relative navigation returns to the browser context's configured home URL.
+        self.page.goto("/", wait_until="domcontentloaded")
         self._wait_for_home_or_challenge()
         return True
 
     def _wait_for_home_or_challenge(self) -> None:
-        """Require a ready Home page before callers retry their operation."""
+        """Wait for Home's search field and report verification blocks."""
         try:
-            outcome = self.page.wait_for_function(
-                """
-                ({ searchSelector, challengePath }) => {
-                    if (location.pathname.startsWith(challengePath)) return 'challenge';
-                    if (location.hostname !== 'www.ebay.com' || location.pathname !== '/') {
-                        return false;
-                    }
-                    const input = document.querySelector(searchSelector);
-                    if (!input || input.disabled || input.readOnly) return false;
-                    const bounds = input.getBoundingClientRect();
-                    const style = getComputedStyle(input);
-                    return bounds.width > 0 && bounds.height > 0
-                        && style.visibility === 'visible' ? 'home' : false;
-                }
-                """,
-                arg={
-                    "searchSelector": self._HOME_SEARCH_SELECTOR,
-                    "challengePath": self._CHALLENGE_PATH,
-                },
+            self.page.locator(self._HOME_SEARCH_SELECTOR).wait_for(
+                state="visible",
                 timeout=self._HOME_READY_TIMEOUT_MS,
             )
         except TimeoutError as exc:
+            if urlsplit(self.page.url).path.startswith(self._CHALLENGE_PATH):
+                raise EbayRecoveryError(
+                    f"eBay verification blocked Home recovery; URL: {self.page.url}"
+                ) from exc
             raise EbayRecoveryError(
-                f"Home did not show an available search field within "
-                f"{self._HOME_READY_TIMEOUT_MS} ms after Go to homepage; URL: {self.page.url}"
+                f"Home search field was not visible within {self._HOME_READY_TIMEOUT_MS} ms; "
+                f"URL: {self.page.url}"
             ) from exc
-        if outcome.json_value() == "challenge":
+        if urlsplit(self.page.url).path != "/" or self.is_displayed():
             raise EbayRecoveryError(
-                f"eBay verification blocked Home recovery; no retry attempted. URL: {self.page.url}"
+                f"Home recovery did not reach a ready homepage; URL: {self.page.url}"
             )

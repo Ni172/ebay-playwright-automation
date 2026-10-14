@@ -28,8 +28,8 @@ class SearchResultsPage(BasePage):
     _RESULT_COUNT_SELECTOR = ".srp-controls__count-heading"
     _GUEST_IDENTITY_SELECTOR = ".gh-identity-signed-out-unrecognized"
     _SEARCH_INPUT_PLACEHOLDER = "Search for anything"
-    _SHIPPING_DIALOG_TEXT = "Are you shipping to"
-    _CONFIRM_BUTTON_NAME = "Confirm"
+    _SHIPPING_FRAME_SELECTOR = 'iframe[title="Shipping Address"]'
+    _SHIPPING_CONFIRM_XPATH = "xpath=//button[contains(text(), 'Confirm')]"
     _MIN_PRICE_INPUT_LABEL = "Minimum Value in ILS"
     _MAX_PRICE_INPUT_LABEL = "Maximum Value in ILS"
     _SUBMIT_PRICE_RANGE_XPATH = "xpath=//button[@title='Submit price range']"
@@ -52,9 +52,11 @@ class SearchResultsPage(BasePage):
         return self.page.get_by_placeholder(self._SEARCH_INPUT_PLACEHOLDER, exact=True)
 
     @property
-    def shipping_destination_dialog(self) -> Locator:
-        """Return eBay's optional shipping-destination confirmation dialog."""
-        return self.page.get_by_role("dialog").filter(has_text=self._SHIPPING_DIALOG_TEXT)
+    def shipping_destination_confirm_button(self) -> Locator:
+        """Return the optional shipping-destination Confirm button."""
+        return self.page.frame_locator(self._SHIPPING_FRAME_SELECTOR).locator(
+            self._SHIPPING_CONFIRM_XPATH
+        )
 
     @property
     def guest_identity(self) -> Locator:
@@ -121,22 +123,20 @@ class SearchResultsPage(BasePage):
             raise EbaySearchError("eBay returned its error page while waiting for search results")
 
     def confirm_shipping_destination_if_present(self, wait_timeout_ms: int = 0) -> bool:
-        """Confirm eBay's already displayed shipping destination when its dialog is open."""
-        dialog = self.shipping_destination_dialog
+        """Confirm eBay's shipping destination when its button exists."""
+        confirm_button = self.shipping_destination_confirm_button
         try:
             if wait_timeout_ms:
-                dialog.wait_for(state="visible", timeout=wait_timeout_ms)
-            elif not dialog.is_visible():
+                confirm_button.wait_for(state="attached", timeout=wait_timeout_ms)
+            elif not confirm_button.count():
                 return False
         except PlaywrightTimeoutError:
             return False
 
-        confirm_button = dialog.get_by_role("button", name=self._CONFIRM_BUTTON_NAME, exact=True)
-        if not confirm_button.is_visible():
-            return False
-
+        # eBay renders the button inside the Shipping Address iframe.
         confirm_button.click()
-        dialog.wait_for(state="hidden")
+        self.page.locator(self._SHIPPING_FRAME_SELECTOR).wait_for(state="hidden")
+        LOGGER.info("Confirmed eBay shipping destination")
         return True
 
     def search_items_by_name_under_price(

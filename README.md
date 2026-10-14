@@ -164,7 +164,8 @@ $trace = Get-ChildItem artifacts/allure-results -Filter *.zip | Select-Object -F
 ## Configuration and architecture
 
 Optional settings are listed in `.env.example`; copy it to `.env` only if you need overrides.
-Real environment variables take precedence. Defaults: ILS / en-IL, action timeout 10 seconds,
+Real environment variables take precedence. The start page defaults to `https://il.ebay.com/`.
+Defaults: ILS / en-IL, action timeout 60 seconds,
 navigation timeout 30 seconds, and `EBAY_TRACE=on`. Do not also enable plugin `--tracing`.
 
 | Location | Responsibility |
@@ -207,7 +208,8 @@ is out of scope.
 - **eBay error page, CAPTCHA, or unavailable listing:** this is the main source of live-run
   instability. eBay can return its `Something went wrong on our end` page after a
   search, price filtering, pagination, or opening a product. When its visible **Go to homepage**
-  control is available, the test returns Home and retries the original search or product URL once.
+  control is available, the test opens the configured Home URL and retries the original search
+  or product URL once.
   If the same error occurs again, the test fails and retains its evidence instead of treating the
   result as empty or silently skipping an item. After an item is already confirmed in the cart, a
   failed return to the search results continues from Home without repeating that addition. CAPTCHA
