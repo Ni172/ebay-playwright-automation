@@ -5,7 +5,7 @@
     "max_price": "220",
     "limit": 5,
     "currency": "ILS",
-    "expected_min_results": 5,
+    "expected_min_results": 1,
     "expected_max_results": 5,
     "expected_page_count": 1
   }

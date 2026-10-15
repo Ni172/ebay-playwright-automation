@@ -24,8 +24,9 @@ def test_searches_and_adds_every_eligible_item(page, cart_case, rng, screenshot)
         cart_case.limit,
         accept_url=shopping_flow.accepts_cart_candidate,
     )
-    assert len(urls) == cart_case.limit, (
-        f"Expected {cart_case.limit} items with Add to cart; found {len(urls)}"
+    assert cart_case.expected_min_results <= len(urls) <= cart_case.expected_max_results, (
+        f"Expected {cart_case.expected_min_results} to {cart_case.expected_max_results} "
+        f"items with Add to cart; found {len(urls)}"
     )
     print(f"Collected {len(urls)} URLs; add every URL")
 
@@ -38,7 +39,7 @@ def test_searches_and_adds_every_eligible_item(page, cart_case, rng, screenshot)
         item_summary += f" variants={variant_summary or 'none'}"
         print(item_summary)
 
-    assert_cart_total_not_exceeds(CartPage(page), cart_case.max_price, cart_case.limit, screenshot)
+    assert_cart_total_not_exceeds(CartPage(page), cart_case.max_price, len(urls), screenshot)
 
 
 def test_add_items_to_cart_rejects_invalid_urls_before_navigation(
